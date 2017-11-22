@@ -1,0 +1,54 @@
+/* Cleaning EHR Lab Data in SAS */
+/* below are SAS paragraphs, add data steps yourself */
+
+/* ============== Units Cleaning ============ */
+
+		 	 if find(resultValue,'x10e','i') 	 	then RESULT_UNIT = strip(substr(resultValue,index(lowcase(resultValue),'x10e')));
+		else if find(resultValue,'calc','i')	 	then RESULT_UNIT = 'CALC';
+		else if find(resultValue,'e.u./dl','i')  	then RESULT_UNIT = 'E.U./DL';
+		else if find(resultValue,'10*3/mm3','i') 	then RESULT_UNIT = '10E3/MM3';
+		else if find(resultValue,'10^3/ul','i')	 	then RESULT_UNIT = '10E3/UL';
+		else if find(resultValue,"x10'3",'i')	 	then RESULT_UNIT = '10E3';
+		else if find(resultValue,'10^9/l','i')	 	then RESULT_UNIT = '10E9/L';
+		else if find(resultValue,'g/dl','i')	 	then RESULT_UNIT = 'G/DL';
+		else if find(resultValue,'gm/dl','i')	 	then RESULT_UNIT = 'GM/DL';
+		else if find(resultValue,'itc','i')		 	then RESULT_UNIT = 'ITC';
+		else if find(resultValue,'k/mm3','i')	 	then RESULT_UNIT = 'K/MM3';
+		else if find(resultValue,'mg/l','i')	 	then RESULT_UNIT = 'MG/L';
+		else if find(resultValue,'mg/dl','i')	 	then RESULT_UNIT = 'MG/DL';
+		else if find(resultValue,'meq/l','i')	 	then RESULT_UNIT = 'MEQ/L';
+		else if find(resultValue,'mmol/l','i')	 	then RESULT_UNIT = 'MMOL/L';
+
+		else if find(resultValue,'minute','i')
+			 or find(resultValue,'mins','i')
+													then RESULT_UNIT = 'MINUTE';
+		else if find(resultValue,'hour','i')
+			 or find(resultValue,'hrs','i')
+												 	then RESULT_UNIT = 'HOUR';
+		else if find(resultValue,'week','i')	 	then RESULT_UNIT = 'WEEK';
+		else if find(resultValue,'month','i')	 	then RESULT_UNIT = 'MONTH';
+		else if find(resultValue,'year','i')		then RESULT_UNIT = 'YEAR';
+
+		else if find(resultValue,'cells/hpf','i') 	then RESULT_UNIT = 'CELLS/HPF';
+		else if find(resultValue,'/hpf','i') 	 	then RESULT_UNIT = '/HPF';
+
+		else if find(resultValue,'jelco','i')	 	then RESULT_UNIT = 'JELCO';
+		else if find(resultValue,'thsn/ul','i')	 	then RESULT_UNIT = 'THSN/UL';
+		else if find(resultValue,'thous/mcl','i') 	then RESULT_UNIT = 'THOUS/MCL';
+		else if find(resultValue,'um3','i')		 	then RESULT_UNIT = 'UM3';
+		else if find(resultValue,'units','i') 		then RESULT_UNIT = 'UNITS';
+		else if find(resultValue,'units/ml','i') 	then RESULT_UNIT = 'UNITS/ML';
+		else if find(resultValue,'u/l','i')	  	 	then RESULT_UNIT = 'U/L';
+		else if find(resultValue,'ul','i')	  	 	then RESULT_UNIT = 'UL';
+		else if find(resultValue,'/ul','i')		 	then RESULT_UNIT = '/UL';
+
+		else if find(resultValue,'fl','i')		 	then RESULT_UNIT = 'FL';
+		else if find(resultValue,'lb','i')		 	then RESULT_UNIT = 'LB';
+		else if find(resultValue,'ml','i')		 	then RESULT_UNIT = 'ML';
+		else if find(resultValue,'mg','i')		 	then RESULT_UNIT = 'MG';
+
+		else if find(resultValue,'out of','i')	 then do;
+			RESULT_QUAL = strip(substr(resultValue,1,index(resultValue,'out of')-1),best12.)||'/'||
+						  strip(substr(resultValue,index(resultValue,'out of')+6,anyalpha(substr(resultValue,index(resultValue,'out of')+6))-1));
+			if find(resultValue,'pain','i')	then RESULT_UNIT = 'PAIN SCORE';
+		end;
