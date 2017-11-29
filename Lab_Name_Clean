@@ -1,2 +1,10 @@
 /* programs focus on cleaning lab names */
 
+%let labNam = ; *<- put lab name related variable as a macro variable here ;
+
+length LAB_NAME $10 ;
+
+/* =========================== BMI Part ===================== */
+
+if find(&labNam.,'bmi','i') and find(&labName.,'submit','i') = 0    then lab_name = 'BMI';
+else if find(compress(&labNam.,' !@#$%^&*()'),'bodymassindex','i')  then lab_name = 'BMI';
