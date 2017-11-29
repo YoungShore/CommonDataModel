@@ -1,37 +1,37 @@
-/* ------------------------------------- A1C PART ------------------------------------ */
+/* -------------------------------------- A1C PART ------------------------------------- */
 
 if lab_name = 'A1C' then do;
 	if input(raw_result,best12.)^=. then result_num = input(raw_result,best12.);
 
 	if find(raw_result,'%') then do;
-			 if input(scan(raw_result,1,'%'),best12.)^=. 								then result_num = input(scan(raw_result,1,'%'),best12.) ;
-		else if find(raw_result,'-') and index(raw_result,'-')<index(raw_result,'%')	then result_num = input(scan(raw_result,2,'-%'),best12.) ;
-		else if find(raw_result,' ') and index(raw_result,' ')<index(raw_result,'%')	then result_num = input(scan(raw_result,2,' %'),best12.) ;
+			 if input(scan(raw_result,1,'%'),best12.)^=. 								then result_num = input(scan(raw_result,1,'%'),best12.) ; *eg:result="7.5%";
+		else if find(raw_result,'-') and index(raw_result,'-')<index(raw_result,'%')	then result_num = input(scan(raw_result,2,'-%'),best12.) ; *eg:result="01/01/2011-7.5%";
+		else if find(raw_result,' ') and index(raw_result,' ')<index(raw_result,'%')	then result_num = input(scan(raw_result,2,' %'),best12.) ; *eg:result="01/01/2017 7.5%";
 		else if find(raw_result,'>') and index(raw_result,'>')<index(raw_result,'%')	then do;
 			result_num = input(substr(raw_result,index(raw_result,'>')+1,index(raw_result,'%')-1),best12.) ;
 			result_modifier = 'GT';
-		end;
+		end; *eg:result=">7.5%";
 		else if find(raw_result,'>=') and index(raw_result,'>=')<index(raw_result,'%')	then do;
 			result_num = input(substr(raw_result,index(raw_result,'>=')+1,index(raw_result,'%')-1),best12.) ;
 			result_modifier = 'GE';
-		end;
+		end; *eg:result=">=7.5%";
 		else if find(raw_result,'<') and index(raw_result,'<')<index(raw_result,'%')	then do;
 			result_num = input(substr(raw_result,index(raw_result,'<')+1,index(raw_result,'%')-1),best12.) ;
 			result_modifier = 'LT';
-		end;
+		end; *eg:result="<7.5%";
 		else if find(raw_result,'<=') and index(raw_result,'<')<index(raw_result,'%')	then do;
 			result_num = input(substr(raw_result,index(raw_result,'<=')+1,index(raw_result,'%')-1),best12.) ;
 			result_modifier = 'LE';
-		end;
+		end; *eg:result="<=7.5%";
 	end;
 
-	else if index(raw_result,'/') < index(raw_result,' ') 	then result_num = input(scan(raw_result,-1,'/ '),best12.);*eg:result="01/01/2017 7.5";
-	else if index(raw_result,'@') > index(raw_result,' ') 	then result_num = input(scan(raw_result,-1,' '),best12.);*eg:result="4.6 @";
-	else if find(raw_result,'valu','i') 					then result_num = input(substr(raw_result,5),best12.);
+	else if index(raw_result,'/') < index(raw_result,' ') 	then result_num = input(scan(raw_result,-1,'/ '),best12.); *eg:result="01/01/2017 7.5";
+	else if index(raw_result,'@') > index(raw_result,' ') 	then result_num = input(scan(raw_result,-1,' '),best12.); *eg:result="4.6 @";
+	else if find(raw_result,'valu','i') 					then result_num = input(substr(raw_result,5),best12.); *eg:result="valu7.5";
 	else if anyalpha(raw_result)=0 and and anydigit(raw_result)>0 and find(raw_result,',')
-															then result_num = input(strip(scan(raw_result,1,','))||'.'||strip(scan(raw_result,2,',')),best12.);
+															then result_num = input(strip(scan(raw_result,1,','))||'.'||strip(scan(raw_result,2,',')),best12.); *eg:result="7,5";
 
-	else if find(raw_result,'unreportable','i')				then result_qual = 'UN' ;
+	else if find(raw_result,'unreportable','i')				then result_qual = 'UN' ; 
 	else if strip(raw_result)^=''							then result_qual = 'UN' ;
 	else result_qual = 'NI' ;
 end;
