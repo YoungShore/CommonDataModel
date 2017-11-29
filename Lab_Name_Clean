@@ -6,5 +6,9 @@ length LAB_NAME $10 ;
 
 /* =========================== BMI Part ===================== */
 
-if find(&labNam.,'bmi','i') and find(&labName.,'submit','i') = 0    then lab_name = 'BMI';
+if find(&labNam.,'bmi','i') and find(&labNam.,'submit','i') = 0     then lab_name = 'BMI';
 else if find(compress(&labNam.,' !@#$%^&*()'),'bodymassindex','i')  then lab_name = 'BMI';
+
+/* =========================== BUN Part ===================== */
+
+if find(&labNam.,'bun','i') and find(&labNam.,'subunit','i')=0      then lab_name = 'BUN';
