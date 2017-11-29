@@ -1,0 +1,25 @@
+/* clean the SPECIMEN_SOURCE. according to PCORnet v3.1, contents defined as:
+BLOOD = Blood
+CSF   = Cerebrospinal fluid
+PLASMA= Plasma
+PPP   = Platelet Poor Plasma
+SERUM = Serum
+SR_PLS= Serum/Plasma
+URINE = Urine
+NI    = No information
+UN    = Unknown
+OT    = Other
+*/
+
+%let specimnSrc = ; *<- put specimen source variable name here ;
+
+length SPECIMEN_SOURCE $10 ;
+
+/* ===================== URINE PART ==================== */
+
+     if find(&specimnSrc.,'urine','i')  then specimen_Source = 'URINE' ;
+else if find(&specimnSrc.,' ur','i')    then specimen_source = 'URINE' ;
+
+/* ========= SERUM/PLASMA PART (need to do this first, before the SERUM or PLASMA only part) ========= */
+
+     if find(&specimnSrc.,'serum/plasma','i')   then specimen_source = 'SR_PLS' ;
