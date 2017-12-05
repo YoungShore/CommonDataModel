@@ -1,0 +1,86 @@
+%macro rapid3_cl(lab,labpul);	/* ========================= RAPID3 CLEAN ======================= */
+data &wrk..cl_&lab.(compress=binary)
+	 &wrk..cl_none_&lab.(compress=binary);
+length 	_pid 			$36
+		_encID			$36
+		_labResltID		$36
+
+		_labOrdeDat		4
+		_labOrdeTim		8
+		_labResltDat	4
+		_labResltTim	8
+		_specimnDat		4
+		_specimnTim		8
+
+		_labNam			$10
+		_labLOINC		$10
+		_labDescript	$300
+		_labResltNum	8
+		_labResltQual	$20
+		_labResltModif	$2
+		_labUnit		$10
+		_labRange		$20
+		_labAbnorm		$2
+		_labPx			$10
+		_labPxDescript	$300
+
+		_specimnSrc		$10
+		_prioty			$2
+		_resltLoc		$2
+
+		_providrID		$36
+		_providrIDTyp	$5
+		_providrID		$36
+		_faciltyID		$36
+		_faciltyTyp		$5
+;
+set &wrk..&labPul._nodup;
+
+_pid = strip(&pid.) ;
+_labResltDat = datepart(&labResltDat) ; format _labResltDat mmddyy10. ;
+_labResltTim = timepart(&labResltTim) ; format _labResltTim time8. ;
+
+		/* ---------------- RAPID NAME CLEAN ---------------- */
+
+if find(&labDescript,'rapid','i') and find(&labDescript,'3') and find(&labDescript,'mdhaq','i')=0 then _labNam = 'RAPID3' ;
+
+		/* ---------------- RAPID RESULT CLEAN --------------- */
+
+if _labNam='RAPID3' then do;
+
+	if input(&labreslt,best12.)^=. then _labResltNum = input(&labreslt,best12.);
+
+	else if find(&labReslt,'/30') and input(scan(&labReslt,1,'/'),best12.)^=. then do;
+		 _labResltNum = input(scan(&labReslt,1,'/'),best12.) ;
+		 _labRange = '0-30';
+	end;
+
+	else if find(&labReslt,'(') then do;
+		if input(scan(&labReslt,1,'('),best12.)^=. then _labResltNum = input(scan(&labReslt,1,'('),best12.);
+		else if input(scan(&labReslt,2,'('),best12.)^=.	then _labResltNum = input(scan(&labReslt,2,'('),best12.);
+	end;
+
+	else if anydigit(strip(&labReslt))=1 and input(scan(&labReslt,1,','),best12.)^=. then _labResltNum = input(scan(&labReslt,1,','),best12.);
+	else if find(&labReslt,'nr','i')				then _labResltQual = 'NI';
+	else if find(&labReslt,'did not complete','i')	then _labResltQual = 'NI';
+
+	if find(&labReslt,'moderate','i')
+	or find(&labReslt,'ms','i')			then _labResltQual = 'MODERATE';
+
+	else if find(&labReslt,'low','i')	then _labResltQual = 'LOW';
+
+	else if find(&labReslt,'high','i')
+		 or find(&labReslt,'hs','i')	then _labResltQual = 'HIGH';
+
+		 /* ---------------- RAPID3 RANGE CLEAN ------------ */
+
+	if _labRange =  '' and _labResltNum > 10 then _labRange = '0-30' ;
+
+	output &wrk..cl_&lab.;
+end;
+
+else output &wrk..cl_none_&lab. ;
+
+run;
+%mend;
+%rapid3_cl(rapid3_16q3,labpul_16q3);*104559 for cl_ cost 1:53 ;
