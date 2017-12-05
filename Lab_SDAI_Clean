@@ -1,0 +1,79 @@
+%macro sdai_cl(lab,labpul);	/* ============================= SDAI CLEAN ============================= */
+data &wrk..cl_&lab.(compress=binary)
+	 &wrk..cl_none_&lab.(compress=binary);
+length 	_pid 			$36
+		_encID			$36
+		_labResltID		$36
+
+		_labOrdeDat		4
+		_labOrdeTim		8
+		_labResltDat	4
+		_labResltTim	8
+		_specimnDat		4
+		_specimnTim		8
+
+		_labNam			$10
+		_labLOINC		$10
+		_labDescript	$300
+		_labResltNum	8
+		_labResltQual	$20
+		_labResltModif	$2
+		_labUnit		$10
+		_labRange		$20
+		_labAbnorm		$2
+		_labPx			$10
+		_labPxDescript	$300
+
+		_specimnSrc		$10
+		_prioty			$2
+		_resltLoc		$2
+
+		_providrID		$36
+		_providrIDTyp	$5
+		_providrID		$36
+		_faciltyID		$36
+		_faciltyTyp		$5
+;
+set &wrk..&labPul._nodup;
+
+_pid = strip(&pid.) ;
+_labResltDat = datepart(&labResltDat) ; format _labResltDat mmddyy10. ;
+_labResltTim = timepart(&labResltTim) ; format _labResltTim time8. ;
+
+	/* --------- SDAI Name Cleaning --------- */
+
+if find(&labDescript,'sdai','i') then _labNam = 'SDAI' ;
+
+if _labNam = 'SDAI' then do;
+
+	/* --------- SDAI Result Cleaning ---------- */
+
+	if input(strip(&labReslt),best12.)^=. then _labResltNum = input(strip(&labReslt),best12.) ;
+
+	else if find(&labReslt,'\') then do;
+		if input(scan(&labReslt,1,'\'),best12.)^=. then _labResltNum = input(scan(&labReslt,1,'\'),best12.) ;
+	end;
+
+	else if find(&labReslt,'`') then do;
+		if input(scan(&labReslt,1,'`'),best12.)^=. then _labResltNum = input(scan(&labReslt,1,'`'),best12.) ;
+	end;
+
+	else if find(&labReslt,',') then do;
+		if input(scan(&labReslt,1,','),best12.)^=. then _labResltNum = input(scan(&labReslt,1,','),best12.) ;
+	end;
+
+	else if find(&labReslt,':') then do;
+		if find(&labReslt,'remission','i')	then _labResltQual = 'REMISSION';
+		else if find(&labReslt,'moderate','i')	then _labResltQual = 'MODERATE';
+		else if find(&labReslt,'low act','i')	then _labResltQual = 'LOW';
+		else if find(&labReslt,'high act','i')	then _labResltQual = 'HIGH';
+	end;
+
+	output &wrk..cl_&lab. ;	
+end;
+
+else output &wrk..cl_none_&lab. ;
+
+run;
+%mend;
+%sdai_cl(sdai_16q3,labpul_16q3);* got 66 cost 1:46 ;
