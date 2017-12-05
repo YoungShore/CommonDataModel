@@ -1,5 +1,5 @@
 # Data-Standardizations
- _use frame like PCORNet common data models._
+ _use structures from PCORNet common data model definitions_
 # Standardized data includes:
 
 ------ PCORnet Part ------
@@ -22,3 +22,8 @@
 ------ Other Necessary Part ------
 
  15. Resident
+ 
+------ Notes for Codes ------
+
+ 1. if code packages like 'LAB_OVERALL_', it's aiming cleaning specific characteristic (like lab unit or specimen source) all together from different sources. it sounds impossible, that's why this list will never 'complete' but growing.
+ 2. if code packages like "LAB_XXX_CLEAN", it's aiming cleaning a particular lab items, like A1C or DAS28 etc, may or may not from different data sources. it won't be a 'complete' list either, but will be realtively steady and growing slowly.
