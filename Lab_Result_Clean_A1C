@@ -1,37 +1,110 @@
-/* -------------------------------------- A1C PART ------------------------------------- */
+%macro a1c_cl(lab,labpul); /* ============================== A1C CLEAN =============================== */
 
-if lab_name = 'A1C' then do;
-	if input(raw_result,best12.)^=. then result_num = input(raw_result,best12.);
+data &wrk..cl_&lab.		 (compress=binary)
+	 &wrk..cl_none_&lab. (compress=binary) ;
 
-	if find(raw_result,'%') then do;
-			 if input(scan(raw_result,1,'%'),best12.)^=. 								then result_num = input(scan(raw_result,1,'%'),best12.) ; *eg:result="7.5%";
-		else if find(raw_result,'-') and index(raw_result,'-')<index(raw_result,'%')	then result_num = input(scan(raw_result,2,'-%'),best12.) ; *eg:result="01/01/2011-7.5%";
-		else if find(raw_result,' ') and index(raw_result,' ')<index(raw_result,'%')	then result_num = input(scan(raw_result,2,' %'),best12.) ; *eg:result="01/01/2017 7.5%";
-		else if find(raw_result,'>') and index(raw_result,'>')<index(raw_result,'%')	then do;
-			result_num = input(substr(raw_result,index(raw_result,'>')+1,index(raw_result,'%')-1),best12.) ;
-			result_modifier = 'GT';
-		end; *eg:result=">7.5%";
-		else if find(raw_result,'>=') and index(raw_result,'>=')<index(raw_result,'%')	then do;
-			result_num = input(substr(raw_result,index(raw_result,'>=')+1,index(raw_result,'%')-1),best12.) ;
-			result_modifier = 'GE';
-		end; *eg:result=">=7.5%";
-		else if find(raw_result,'<') and index(raw_result,'<')<index(raw_result,'%')	then do;
-			result_num = input(substr(raw_result,index(raw_result,'<')+1,index(raw_result,'%')-1),best12.) ;
-			result_modifier = 'LT';
-		end; *eg:result="<7.5%";
-		else if find(raw_result,'<=') and index(raw_result,'<')<index(raw_result,'%')	then do;
-			result_num = input(substr(raw_result,index(raw_result,'<=')+1,index(raw_result,'%')-1),best12.) ;
-			result_modifier = 'LE';
-		end; *eg:result="<=7.5%";
+length 	_pid 			$36
+		_encID			$36
+		_labResltID		$36
+
+		_labOrdeDat		4
+		_labOrdeTim		8
+		_labResltDat	4
+		_labResltTim	8
+		_specimnDat		4
+		_specimnTim		8
+
+		_labNam			$10
+		_labLOINC		$10
+		_labDescript	$300
+		_labResltNum	8
+		_labResltQual	$20
+		_labResltModif	$2
+		_labUnit		$10
+		_labRange		$20
+		_labAbnorm		$2
+		_labPx			$10
+		_labPxDescript	$300
+
+		_specimnSrc		$10
+		_prioty			$2
+		_resltLoc		$2
+
+		_providrID		$36
+		_providrIDTyp	$5
+		_providrID		$36
+		_faciltyID		$36
+		_faciltyTyp		$5
+;
+set &wrk..&labPul._nodup;
+
+_pid 			= strip(&pid.);
+_labResltDat 	= datepart(&labResltDat) ;
+_labResltTim 	= timepart(&labResltTim) ;
+
+		/* ------------------ name clean --------------- */
+
+if find(&labDescript,'a1c','i') then _labNam = 'A1C' ;
+
+
+if _labNam = 'A1C' then do;
+
+		/* ------------------ result clean ------------- */
+
+	if input(&labReslt,best12.)^=. then _labResltNum = input(&labReslt,best12.);
+	else if input(scan(&labReslt,1,' ('),best12.)^=. then _labResltNum = input(scan(&labReslt,1,' ('),best12.);
+
+	else if find(&labReslt,'%') then do;
+			 if input(scan(&labReslt,1,'%'),best12.)^=. 							then _labResltNum = input(scan(&labReslt,1,'%'),best12.) ; /*eg:result="7.5%";*/
+		else if find(&labReslt,'-') and index(&labReslt,'-')<index(&labReslt,'%')	then _labResltNum = input(scan(&labReslt,2,'-%'),best12.) ; /*eg:result="01/01/2011-7.5%";*/
+		else if find(&labReslt,' ') and index(&labReslt,' ')<index(&labReslt,'%')	then _labResltNum = input(scan(&labReslt,2,' %'),best12.) ; /*eg:result="01/01/2017 7.5%";*/
+		else if find(&labReslt,'>') and index(&labReslt,'>')<index(&labReslt,'%')	then do;
+			_labResltNum = input(substr(&labReslt,index(&labReslt,'>')+1,index(&labReslt,'%')-1),best12.) ;
+			_labResltModif = 'GT';
+		end; /*eg:result=">7.5%";*/
+		else if find(&labReslt,'>=') and index(&labReslt,'>=')<index(&labReslt,'%')	then do;
+			_labResltNum = input(substr(&labReslt,index(&labReslt,'>=')+1,index(&labReslt,'%')-1),best12.) ;
+			_labResltModif = 'GE';
+		end; /*eg:result=">=7.5%";*/
+		else if find(&labReslt,'<') and index(&labReslt,'<')<index(&labReslt,'%')	then do;
+			_labResltNum = input(substr(&labReslt,index(&labReslt,'<')+1,index(&labReslt,'%')-1),best12.) ;
+			_labResltModif = 'LT';
+		end; /*eg:result="<7.5%";*/
+		else if find(&labReslt,'<=') and index(&labReslt,'<')<index(&labReslt,'%')	then do;
+			_labResltNum = input(substr(&labReslt,index(&labReslt,'<=')+1,index(&labReslt,'%')-1),best12.) ;
+			_labResltModif = 'LE';
+		end; /*eg:result="<=7.5%";*/
 	end;
 
-	else if index(raw_result,'/') < index(raw_result,' ') 	then result_num = input(scan(raw_result,-1,'/ '),best12.); *eg:result="01/01/2017 7.5";
-	else if index(raw_result,'@') > index(raw_result,' ') 	then result_num = input(scan(raw_result,-1,' '),best12.); *eg:result="4.6 @";
-	else if find(raw_result,'valu','i') 					then result_num = input(substr(raw_result,5),best12.); *eg:result="valu7.5";
-	else if anyalpha(raw_result)=0 and and anydigit(raw_result)>0 and find(raw_result,',')
-															then result_num = input(strip(scan(raw_result,1,','))||'.'||strip(scan(raw_result,2,',')),best12.); *eg:result="7,5";
+	else if index(&labReslt,'/') < index(&labReslt,' ') 	then _labResltNum = input(scan(&labReslt,-1,'/ '),best12.); /*eg:result="01/01/2017 7.5";*/
+	else if index(&labReslt,'@') > index(&labReslt,' ') 	then _labResltNum = input(scan(&labReslt,-1,' '),best12.); /*eg:result="4.6 @";*/
+	else if find(&labReslt,'valu','i') 						then _labResltNum = input(substr(&labReslt,5),best12.); /*eg:result="valu7.5";*/
+	else if anyalpha(&labReslt)=0 and anydigit(&labReslt)>0 and find(&labReslt,',')
+															then _labResltNum = input(strip(scan(&labReslt,1,','))||'.'||strip(scan(&labReslt,2,',')),best12.); /*eg:result="7,5";*/
 
-	else if find(raw_result,'unreportable','i')				then result_qual = 'UN' ; 
-	else if strip(raw_result)^=''							then result_qual = 'UN' ;
-	else result_qual = 'NI' ;
+	else if find(&labReslt,'tnp','i')						then _labResltQual = 'NI' ;
+	else if find(&labReslt,'test not perform','i')			then _labResltQual = 'NI' ;
+	else if find(&labReslt,'cancelled','i')					then _labResltQual = 'NI' ;
+	else if find(&labReslt,'not tested','i')				then _labResltQual = 'NI' ;
+	else if find(&labReslt,'unable to perform','i')			then _labResltQual = 'NI' ;
+	else if find(&labReslt,'pending','i')					then _labResltQual = 'UN' ;
+	else if find(&labReslt,'unreportable','i')				then _labResltQual = 'UN' ; 
+	else if strip(&labReslt)^=''							then _labResltQual = 'UN' ;
+	else _labResltQual = 'NI' ;
+
+		/* -------------- unit clean ------------ */
+
+	if find(&labReslt,'%')
+	or find(&labReslt,'percent','i')
+	or find(&labUnit,'%')
+	or find(&labUnit,'percent','i')			then _labUnit = '%' ;
+
+	output &wrk..cl_&lab. ;
+
 end;
+
+else output &wrk..cl_none_&lab. ;
+
+run;
+%mend;
+%a1c_cl(a1c_16q3,labpul_16q3);*rise data, got 4633 cost 1:58 ;
