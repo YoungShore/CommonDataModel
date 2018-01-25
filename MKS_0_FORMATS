@@ -1,0 +1,193 @@
+/* STD_FORMATS_MKS */
+
+proc format;
+
+  value $cpt99fmt
+
+'99217'='IF'	/* Hospital observation care discharge 		*/
+'99218'='IF'	/* Hospital initial observation care 		*/
+'99219'='IF'	/* Hospital initial observation care 		*/
+'99220'='IF'	/* Hospital initial observation care 		*/
+'99221'='IF'	/* Initial hospital care					*/
+'99222'='IF'	/* Initial hospital care					*/
+'99223'='IF'	/* Initial hospital care					*/
+
+
+'99231'='IF'	/* Subsequent hospital Care				*/
+'99232'='IF' 	/* Subsequent hospital Care; (added from PV code rage, was not in old list) */
+'99233'='IF' 	/* Subsequent hospital Care; (added from PV code rage, was not in old list) */
+'99234'='IF'	/* Observation or inpatient hospital care (admit & discharge on same day)	*/
+'99235'='IF'	/* Observation or inpatient hospital care (admit & discharge on same day)	*/
+'99236'='IF'	/* Observation or inpatient hospital care (admit & discharge on same day)	*/
+
+/*'99237'='IF' was in old codes */
+
+'99238'='IF'	/* Hospital discharge day management		*/
+'99239'='IF'	/* Hospital discharge day management		*/
+'99251'='IF'	/* Initial inpatient consultation			*/
+'99252'='IF'	/* Initial inpatient consultation			*/
+'99253'='IF'	/* Initial inpatient consultation			*/
+'99254'='IF'	/* Initial inpatient consultation			*/
+'99255'='IF'	/* Initial inpatient consultation			*/
+
+/*'99256'='IF'
+'99257'='IF'
+'99258'='IF'
+'99259'='IF'
+'99260'='IF' was in old codes */
+
+'99261'='IF'	/* Follow-up inpatient consultation			*/
+'99262'='IF'	/* Follow-up inpatient consultation			*/
+'99263'='IF'	/* Follow-up inpatient consultation			*/
+
+'99281'='ED'	/* Emergency department visit				*/
+'99282'='ED'	/* Emergency department visit				*/
+'99283'='ED'	/* Emergency department visit				*/
+'99284'='ED'	/* Emergency department visit				*/
+'99285'='ED'	/* Emergency department visit				*/
+
+'99291'='IF'	/* Critical care, evaluation and management						*/
+'99292'='IF'	/* Critical care, evaluation and management						*/
+'99356'='IF'	/* Prolonged Physician service with direct contact - inpatient	*/
+'99357'='IF'	/* Prolonged Physician service with direct contact - inpatient	*/
+
+'99024'='AV'	/* Post-op followup visit */
+'99058'='AV'	/* Office emergency care */
+'99201'='AV'	/* Office/outpatient visit - new patient */
+'99202'='AV'	/* Office/outpatient visit - new patient */
+'99203'='AV'	/* Office/outpatient visit - new patient */
+'99204'='AV'	/* Office/outpatient visit - new patient */
+'99205'='AV'	/* Office/outpatient visit - new patient */
+'99211'='AV'	/* Office/outpatient visit - established patient */
+'99212'='AV'	/* Office/outpatient visit - established patient */
+'99213'='AV'	/* Office/outpatient visit - established patient */
+'99214'='AV'	/* Office/outpatient visit - established patient */
+'99215'='AV'	/* Office/outpatient visit - established patient */
+'99241'='AV'	/* Office consultation */
+'99242'='AV'	/* Office consultation */
+'99243'='AV'	/* Office consultation */
+'99244'='AV'	/* Office consultation */
+'99245'='AV'	/* Office consultation */
+'99271'='AV'	/* Confirmatory consultation (in any setting) */
+'99272'='AV'	/* Confirmatory consultation (in any setting) */
+'99273'='AV'	/* Confirmatory consultation (in any setting) */
+'99274'='AV'	/* Confirmatory consultation (in any setting) */
+'99275'='AV'	/* Confirmatory consultation (in any setting) */
+
+'99301'='NH'	/* Nursing facility annual assessment */
+'99302'='NH'	/* Nursing facility annual assessment */
+'99303'='NH'	/* Nursing facility annual assessment */
+'99304'='NH'	/* Nursing facility annual assessment (2006) */
+'99305'='NH'	/* Nursing facility annual assessment (2006) */
+'99306'='NH'	/* Nursing facility annual assessment (2006) */
+'99307'='NH'	/* Subsequent nursing facility care (2006) */
+'99308'='NH'	/* Subsequent nursing facility care (2006) */
+'99309'='NH'	/* Subsequent nursing facility care (2006) */
+'99310'='NH'	/* Subsequent nursing facility care (2006) */
+'99311'='NH'	/* Subsequent nursing facility care */
+'99312'='NH'	/* Subsequent nursing facility care */
+'99313'='NH'	/* Subsequent nursing facility care */
+/*'99314'='NH' 	was in old list */
+'99315'='NH'	/* Nursing facility discharge services */
+'99316'='NH'	/* Nursing facility discharge services */
+/*'99317'='NH' 	was in old list */
+'99318'='NH'	/* Nursing facility - other services (2006) */
+
+'99321'='HH' 	/* Domiciliary or rest home visit - new patient; was in 'NH' group, corrected by Lang on 9/2/2016 */
+'99322'='HH' 	/* Domiciliary or rest home visit - new patient; was in 'NH' group, corrected by Lang on 9/2/2016 */
+'99323'='HH' 	/* Domiciliary or rest home visit - new patient; was in 'NH' group, corrected by Lang on 9/2/2016 */
+'99324'='HH' 	/* Domiciliary or rest home visit - new patient (2006); was in 'NH' group, corrected by Lang on 9/2/2016 */
+'99325'='HH' 	/* Domiciliary or rest home visit - new patient (2006); was in 'NH' group, corrected by Lang on 9/2/2016 */
+'99326'='HH' 	/* Domiciliary or rest home visit - new patient (2006); was in 'NH' group, corrected by Lang on 9/2/2016 */
+'99327'='HH' 	/* Domiciliary or rest home visit - new patient (2006); was in 'NH' group, corrected by Lang on 9/2/2016 */
+'99328'='HH' 	/* Domiciliary or rest home visit - new patient (2006); was in 'NH' group, corrected by Lang on 9/2/2016 */
+/*'99329'='NH'
+'99330'='NH'	was in old list */
+'99331'='HH'	/* Domiciliary or rest home visit - established patient; was in 'NH' group, corrected by Lang on 9/2/2016 */
+'99332'='HH'	/* Domiciliary or rest home visit - established patient; was in 'NH' group, corrected by Lang on 9/2/2016 */
+'99333'='HH'	/* Domiciliary or rest home visit - established patient; was in 'NH' group, corrected by Lang on 9/2/2016 */
+'99334'='HH'	/* Domiciliary or rest home visit - established patient (2006); was in 'NH' group, corrected by Lang on 9/2/2016 */
+'99335'='HH'	/* Domiciliary or rest home visit - established patient (2006); was in 'NH' group, corrected by Lang on 9/2/2016 */
+'99336'='HH'	/* Domiciliary or rest home visit - established patient (2006); was in 'NH' group, corrected by Lang on 9/2/2016 */
+'99337'='HH'	/* Domiciliary or rest home visit - established patient (2006); was in 'NH' group, corrected by Lang on 9/2/2016 */
+'99341'='HH'	/* Home visit - new patient; was in 'NH' group, corrected by Lang on 9/2/2016 */
+'99342'='HH'	/* Home visit - new patient; was in 'NH' group, corrected by Lang on 9/2/2016 */
+'99343'='HH'	/* Home visit - new patient; was in 'NH' group, corrected by Lang on 9/2/2016 */
+'99344'='HH'	/* Home visit - new patient; was in 'NH' group, corrected by Lang on 9/2/2016 */
+'99345'='HH' 	/* Home visit - new patient; was in 'NH' group, corrected by Lang on 9/2/2016 */
+/*'99346'='NH'	was in old list */
+'99347'='HH'	/* Home visit - established patient; was in 'NH' group, corrected by Lang on 9/2/2016 */
+'99348'='HH'	/* Home visit - established patient; was in 'NH' group, corrected by Lang on 9/2/2016 */
+'99349'='HH'	/* Home visit - established patient; was in 'NH' group, corrected by Lang on 9/2/2016 */
+'99350'='HH'	/* Home visit - established patient; was in 'NH' group, corrected by Lang on 9/2/2016 */
+'99351'='HH'	/* Home visit - established patient (1999); was in 'NH' group, corrected by Lang on 9/2/2016 */
+'99352'='HH'	/* Home visit - established patient (1999); was in 'NH' group, corrected by Lang on 9/2/2016 */
+'99353'='HH'	/* Home visit - established patient (1999); was in 'NH' group, corrected by Lang on 9/2/2016 */
+
+'99354'='AV'	/* Prolonged Physician service with direct contact */
+'99355'='AV'	/* Prolonged Physician service with direct contact */
+'99385'='AV'	/* Initial preventive medicine evaluation (adults) */
+'99386'='AV'	/* Initial preventive medicine evaluation (adults) */
+'99387'='AV'	/* Initial preventive medicine evaluation (adults) */
+'99395'='AV'	/* Periodic preventive medicine evaluation (adults) */
+'99396'='AV'	/* Periodic preventive medicine evaluation (adults) */
+'99397'='AV'	/* Periodic preventive medicine evaluation (adults) */
+'99401'='AV'	/* Preventive medicine, individual counseling */
+'99402'='AV'	/* Preventive medicine, individual counseling */
+'99403'='AV'	/* Preventive medicine, individual counseling */
+'99404'='AV'	/* Preventive medicine, individual counseling */
+'99429'='AV'	/* Unlisted preventive medicine service (new) */
+'99499'='AV'	/* Unlisted evaluation and management */
+'99289'='AV'	/* Pediatric critical care transport */
+'99290'='AV'	/* Pediatric critical care transport */
+
+'99293'='IF'	/* Inpatient pediatric critical care */
+'99294'='IF'	/* Inpatient pediatric critical care */
+'99295'='IF'	/* Inpatient neonatal critical care */
+'99296'='IF'	/* Inpatient neonatal critical care */
+'99297'='IF'	/* Intensive low birth weight services */
+'99298'='IF'	/* Intensive low birth weight services */
+'99299'='IF'	/* Intensive low birth weight services */
+'99300'='IF'	/* Intensive low birth weight services (2006) */
+
+'99381'='AV'	/* Initial preventive medicine evaluation (infant-adolescent) */
+'99382'='AV'	/* Initial preventive medicine evaluation (infant-adolescent) */
+'99383'='AV'	/* Initial preventive medicine evaluation (infant-adolescent) */
+'99384'='AV'	/* Initial preventive medicine evaluation (infant-adolescent) */
+'99391'='AV'	/* Periodic preventive medicine evaluation (infant-adolescent) */
+'99392'='AV'	/* Periodic preventive medicine evaluation (infant-adolescent) */
+'99393'='AV'	/* Periodic preventive medicine evaluation (infant-adolescent) */
+'99394'='AV'	/* Periodic preventive medicine evaluation (infant-adolescent) */
+
+'99431'='IF'	/* Newborn care; was in 'AV' group, corrected by Lang on 9/2/2016 */
+'99432'='IF'	/* Newborn care; was in 'AV' group, corrected by Lang on 9/2/2016 */
+'99433'='IF'	/* Newborn care; was in 'AV' group, corrected by Lang on 9/2/2016 */
+'99434'='IF'	/* Newborn care; was in 'AV' group, corrected by Lang on 9/2/2016 */
+'99435'='IF'	/* Newborn care; was in 'AV' group, corrected by Lang on 9/2/2016 */
+'99436'='IF'	/* Newborn care; was in 'AV' group, corrected by Lang on 9/2/2016 */
+'99437'='IF'	/* Newborn care; was in 'AV' group, corrected by Lang on 9/2/2016 */
+'99438'='IF'	/* Newborn care; was in 'AV' group, corrected by Lang on 9/2/2016 */
+'99439'='IF'	/* Newborn care; was in 'AV' group, corrected by Lang on 9/2/2016 */
+'99440'='IF'	/* Newborn care; was in 'AV' group, corrected by Lang on 9/2/2016 */
+
+'99460'='IF'	/* Initial hospital or birthing center care, per day, for evaluation and management of normal newborn infant; added new codes found by Lang on 9/2/2016 */
+'99461'='IF'	/* Initial care, per day, for evaluation and management of normal newborn infant seen in other than hospital or birthing center; added new codes found by Lang on 9/2/2016 */
+'99462'='IF'	/* Subsequent hospital care, per day, for evaluation and management of normal newborn; added new codes found by Lang on 9/2/2016 */
+'99463'='IF'	/* Initial hospital or birthing center care, per day, for evaluation and management of normal newborn infant admitted and discharged on the same date; added new codes found by Lang on 9/2/2016 */
+'99464'='IF'	/* Delivery/Birthing Room Attendance and Resuscitation Services; added new codes found by Lang on 9/2/2016 */
+'99465'='IF'	/* Delivery/Birthing Room Attendance and Resuscitation Services; added new codes found by Lang on 9/2/2016 */
+
+/* -----------------------------	below codes were included in old codes but not in PV E/M tables
+'99206'='AV'
+'99207'='AV'
+'99208'='AV'
+'99209'='AV'
+'99210'='AV'
+'99398'='AV'
+'99399'='AV'
+'99400'='AV'
+---------------------------------*/
+
+other='OT'
+;
+run;
