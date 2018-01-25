@@ -71,7 +71,7 @@ run;
 
 %macro prepare_dxs(dstin,dstout,renames,admDx,primDx,primPOA,dx1,dx1POA,dxs,poas);
 
-data &wrk..PREP_DX_&DSTOUT. (compress=binary) ;
+data &wrk..PREP_DX_&DSTOUT. (index=(_patid pid_enc_admdt=(_patid _encounterID _admit_date)) compress=binary) ;
 
 length 	_PATID 						$20
         _ENCOUNTERID 				$20
@@ -235,7 +235,8 @@ set &WRK..nodupul_DX_&DSTIN. &renames. ;
 		_SOURCE 		AGE
 	;
 run;
-proc sort data=&wrk..prep_dx_&dstout. nodup force;
+proc sort data=&wrk..prep_dx_&dstout. nodup force
+	  out =&wrk..prep_dx_&dstout.(index=(_patid pid_enc_admdt=(_patid _encounterID _admit_date)) compress=binary);
 by 		_PATID 		_ENCOUNTERID 		/*_ENC_TYPE*/
 		_ADMIT_DATE 	_ADMIT_TIME			_ADMITTING_SOURCE		_ADMIT_TYPE
 		_DISCHARGE_DATE	_DISCHARGE_TIME		_DISCHARGE_DISPOSITION	_DISCHARGE_STATUS 
