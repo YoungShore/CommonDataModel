@@ -1,0 +1,316 @@
+/* STD_Lab_MKS16_180116 */
+
+/* ================================================================ */
+/*						Define SAS Libraries						*/
+
+%inc "M:\studies\MarketScan1\formats\libname.txt";
+%inc "M:\studies\MarketScan1\pgms\Shuo\libname_sy.txt";
+%inc "M:\studies\MarketScan1\pgms\Shuo\STD_Formats_MKS_180112.sas";
+
+%let raw = ;
+%let vew = dt64 ;
+%let wrk = ysms2 ;
+%let std = s_mks;
+
+%let outpath = M:\studies\MarketScan1\pgms\Shuo\results ;
+%let verDate = %sysfunc(today(),yymmdd6.) ;
+%let outfolder = &verDate.-MKS STD LAB ;
+
+
+%macro mkdir(outpath,outfolder);
+	* CREATE WORK DIRECTORY FOR OUTPUT IF IT DOES NOT EXIST;
+	%if %sysfunc(fileexist(&outpath.\&outfolder.)) ^= 1 %then %do;
+		options dlcreatedir;
+		libname output "&outpath.\&outfolder.";
+	%end;
+	%else %put &outpath.\&outfolder. already exists ;
+%mend mkdir;
+%mkdir(&outpath.,&outfolder.);
+
+%let _PATID				= PUT(ENROLID,20.) ;
+%let _LABRESULTCMID		= PUT(SEQNUM,15.) ;
+%let _ENCOUNTERID		= _NA_ ;
+%let _SPECIMENSOURCE	= _NA_ ;
+%let _LABLOINC			= LOINCCD ;
+%let _PRIORITY			= _NA_ ;
+%let _RESULTLOC			= "NI" ;
+%let _LABPX				= PROC1 ;
+%let _LABPXTYPE			= PROCTYP ;
+%let _LABORDERDATE		= _NA_ ;
+%let _SPECIMENDATE		= _NA_ ;
+%let _SPECIMENTIME		= _NA_ ;
+%let _RESULTDATE		= SVCDATE ;
+%let _RESULTTIME		= _NA_ ;
+%let _RESULTQUAL		= RESLTCAT ;
+%let _RESULTSNOMED		= _NA_ ;
+%let _RESULTNUM			= RESULT;
+%let _RESULTMODIFIER	= _NA_ ;
+%let _RESULTUNIT		= RESUNIT ;
+%let _NORMRANGELOW		= REFLOW ;
+%let _NORMMODIFIERLOW	= _NA_ ;
+%let _NORMRANGEHIGH		= REFHIGH ;
+%let _NORMMODIFIERHIGH	= _NA_ ;
+%let _ABNIND			= ABNORMAL ;
+
+%let _FACILITYID		= _NA_ ;
+%let _FACILITYTYPE		= STDPLAC ;
+%let _PROVIDERID		= PUT(PROVID,BEST12.) ;
+%let _PROVIDERIDTYPE	= _NA_ ;
+%let _PROVIDERTYPE		= STDPROV ;
+%let _SOURCE			= _NA_ ;
+
+
+%MACRO PULL_LAB_R(RAW,DSTIN,DSTOUT,KEPVARS);
+
+data &VEW..PUL_LAB_&DSTOUT. / view = &VEW..PUL_LAB_&DSTOUT.;
+
+	length 	_PATID 				$20
+			_LAB_RESULT_CM_ID	$15
+			_ENCOUNTERID		$20
+			_SPECIMEN_SOURCE	$10
+			_LAB_LOINC 			$10
+			_PRIORITY			$2
+			_RESULT_LOC			$2
+			_LAB_PX 			$11
+			_LAB_PX_TYPE 		$2
+			_LAB_ORDER_DATE		4
+			_SPECIMEN_DATE		4
+			_SPECIMEN_TIME		8
+			_RESULT_DATE 		4
+			_RESULT_TIME 		8
+			_RESULT_QUAL 		$10 
+			_RESULT_SNOMED		$20
+	       	_RESULT_NUM 		8 
+			_RESULT_MODIFIER	$2 
+			_RESULT_UNIT 		$30 
+          	_NORM_RANGE_LOW 	$10  
+			_NORM_MODIFIER_LOW	$2 
+          	_NORM_RANGE_HIGH 	$10 
+			_NORM_MODIFIER_HIGH	$2 
+			_ABN_IND 			$2 
+
+			_FACILITYID			$16
+        	_FACILITY_TYPE 		$3
+			_PROVIDERID 		$10
+			_PROVIDERID_TYPE	$4
+			_PROVIDER_TYPE 		$3
+			_SOURCE 			$5	
+	;
+	label	_PATID				= "Unique Patient Identification Number"
+			_LAB_RESULT_CM_ID	= "Unique ID for Lab Result Claim Record"
+			_ENCOUNTERID		= "Encounter ID"
+			_SPECIMEN_SOURCE	= "Specimen Source"
+			_LAB_LOINC			= "Lab LOINC Codes"
+			_PRIORITY			= "Immediacy of Test"
+			_RESULT_LOC			= "Location of Test Result"
+			_LAB_PX				= "Procedure Code Used to Identify the Originating Order for the Lab Test"
+			_LAB_PX_TYPE		= "Procedure Code Type"
+			_LAB_ORDER_DATE		= "Order Date" 
+			_SPECIMEN_DATE		= "Specimen Date"
+			_SPECIMEN_TIME		= "Specimen Time"
+			_RESULT_DATE		= "Result Date"
+			_RESULT_TIME		= "Result Time"
+			_RESULT_QUAL		= "Lab Result Category Code/Qualitative Result"
+			_RESULT_SNOMED		= "Qualitative Result Mapped to SNOMED CT"
+			_RESULT_NUM			= "Quantitative Result"
+			_RESULT_MODIFIER	= "Modifier for Result Values"
+			_RESULT_UNIT		= "Units for Quantitative Result"
+         	_NORM_RANGE_LOW		= "Lower Bound of the Normal Range Assigned by the Laboratory"
+			_NORM_MODIFIER_LOW	= "Modifier for NORM_RANGE_LOW Values"
+        	_NORM_RANGE_HIGH	= "Upper Bound of the Normal Range Assigned by the Laboratory"
+			_NORM_MODIFIER_HIGH	= "Modifier for NORM_RANGE_HIGH Values"
+			_ABN_IND			= "Abnormal Result Indicator"
+
+			_FACILITYID		= "Facility ID"
+			_FACILITY_TYPE		= "Place of Service"
+			_PROVIDERID			= "Provider ID"
+			_PROVIDERID_TYPE	= "Provider ID Type"
+        	_PROVIDER_TYPE		= "Provider Type"
+	      	_SOURCE				= "Source of Data"
+	;
+set &RAW..&DSTIN.(keep=&KEPVARS.
+				  where=(strip(&_PATID.) not in (".","") )
+				  );
+
+_PATID				= compress(&_PATID.,'. ') ;
+_LAB_RESULT_CM_ID	= compress(&_LABRESULTCMID.,'. ') ;
+
+if compress(&_ENCOUNTERID.,'. ')^='' then _ENCOUNTERID = compress(&_ENCOUNTERID.,'. ') ;
+else _ENCOUNTERID = compress(substr("&dstout.",1,4),'_')||substr("&dstout.",length("&dstout.")-1,2)||strip(_LAB_RESULT_CM_ID) ;
+
+_SPECIMEN_SOURCE	= compress(&_SPECIMENSOURCE.,'. ') ;
+_LAB_LOINC			= compress(&_LABLOINC.,'. ') ;
+_PRIORITY			= compress(&_PRIORITY.,'. ') ;
+_RESULT_LOC			= compress(&_RESULTLOC.,'. ') ;
+_LAB_PX				= compress(&_LABPX.,'. ') ;
+
+if strip(&_labPxType.)='0' then _LAB_PX_TYPE = '10';
+else if strip(&_labPxType.) in ('1','7')						then _LAB_PX_TYPE = 'CH' ;
+else if strip(&_labPxType.) in ('*')							then _LAB_PX_TYPE = '09' ;
+else if length(&_labPxType.)=7 									then _LAB_PX_TYPE = '10' ;
+else if length(&_labPxType.)<5 									then _LAB_PX_TYPE = '09' ;
+else if length(&_labPxType.)>=5 and anyalpha(&_labPxType.)>=0 	then _LAB_PX_TYPE = 'CH' ;
+
+_LAB_ORDER_DATE		= &_LABORDERDATE. ;
+_SPECIMEN_DATE		= &_SPECIMENDATE. ;
+_SPECIMEN_TIME		= &_SPECIMENTIME. ;
+_RESULT_DATE		= &_RESULTDATE. ;
+_RESULT_TIME		= &_RESULTTIME. ;
+_RESULT_QUAL		= compress(&_RESULTQUAL.,'. ') ;
+_RESULT_SNOMED		= compress(&_RESULTSNOMED.,'. ') ;
+_RESULT_NUM			= &_RESULTNUM. ;
+_RESULT_MODIFIER	= compress(&_RESULTMODIFIER.,'. ') ;
+_RESULT_UNIT		= compress(&_RESULTUNIT.,' ') ;			/*<-not compress '.', in case change the value*/
+_NORM_RANGE_LOW		= compress(&_NORMRANGELOW.,' ') ;		/*<-not compress '.', in case change the value*/
+_NORM_MODIFIER_LOW	= compress(&_NORMMODIFIERLOW.,'. ') ;
+_NORM_RANGE_HIGH	= compress(&_NORMRANGEHIGH.,' ') ;		/*<-not compress '.', in case change the value*/
+_NORM_MODIFIER_HIGH	= compress(&_NORMMODIFIERHIGH.,'. ') ;
+
+	 if &_ABNIND. = 'A' then _ABN_IND = 'AB' ;
+else if &_ABNIND. = 'H'	then _ABN_IND = 'AH' ;
+else if &_ABNIND. = 'L' then _ABN_IND = 'AL' ;
+else if &_ABNIND. = 'N'	then _ABN_IND = 'NL' ;
+else _ABN_IND = 'NI' ;
+
+_FACILITYID			= '' ;
+_FACILITY_TYPE		= compress(&_FACILITYTYPE.,'. ') ;
+_PROVIDERID 		= compress(&_PROVIDERID.,'. ') ;
+_PROVIDERID_TYPE	= compress(&_PROVIDERIDTYPE.,'. ') ;
+_PROVIDER_TYPE		= compress(&_PROVIDERTYPE.,'. ') ;
+
+_SOURCE				= upcase(strip(scan("&dstout.",-1,'_'))) ;
+
+format _RESULT_DATE mmddyy10. _RESULT_NUM BEST12. ;
+
+keep 	_:		;
+
+run;
+%MEND;
+
+%MACRO COMBINE_LAB_BY_YEAR(YR);
+data &VEW..LAB_COMBINE_&YR. / view=&VEW..LAB_COMBINE_&YR. ;
+set &VEW..PUL_LAB_&YR._R: ;
+rename 		_PATID 				= PATID
+			_LAB_RESULT_CM_ID	= LAB_RESULT_CM_ID
+			_ENCOUNTERID		= ENCOUNTERID
+			_SPECIMEN_SOURCE	= SPECIMEN_SOURCE
+			_LAB_LOINC 			= LAB_LOINC
+			_PRIORITY			= PRIORITY
+			_RESULT_LOC			= RESULT_LOC
+			_LAB_PX 			= LAB_PX
+			_LAB_PX_TYPE 		= LAB_PX_TYPE
+			_LAB_ORDER_DATE		= LAB_ORDER_DATE
+			_SPECIMEN_DATE		= SPECIMEN_DATE
+			_SPECIMEN_TIME		= SPECIMEN_TIME
+			_RESULT_DATE 		= RESULT_DATE
+			_RESULT_TIME 		= RESULT_TIME
+			_RESULT_QUAL 		= RESULT_QUAL
+			_RESULT_SNOMED		= RESULT_SNOMED
+	       	_RESULT_NUM 		= RESULT_NUM
+			_RESULT_MODIFIER	= RESULT_MODIFIER
+			_RESULT_UNIT 		= RESULT_UNIT
+          	_NORM_RANGE_LOW 	= NORM_RANGE_LOW
+			_NORM_MODIFIER_LOW	= NORM_MODIFIER_LOW
+          	_NORM_RANGE_HIGH 	= NORM_RANGE_HIGH
+			_NORM_MODIFIER_HIGH	= NORM_MODIFIER_HIGH
+			_ABN_IND 			= ABN_IND
+
+			_FACILITYID			= FACILITYID
+        	_FACILITY_TYPE 		= FACILITY_TYPE
+			_PROVIDERID 		= PROVIDERID
+			_PROVIDERID_TYPE	= PROVIDERID_TYPE
+			_PROVIDER_TYPE 		= PROVIDER_TYPE
+			_SOURCE 			= SOURCE
+;
+
+run;
+
+proc sort data=&VEW..LAB_COMBINE_&YR.(drop= _: ) nodup 
+		  out=&STD..LAB_RESULT_CM&YR.(compress=binary index=(PATID RESULT_DATE) alter="aDmSY18"
+										label="Lab Results from &YR. MarketScan R Files;PW=_AD_MSY18" );
+	by 	PATID SOURCE 
+		RESULT_DATE RESULT_TIME 
+		LAB_LOINC LAB_PX LAB_PX_TYPE 
+		RESULT_QUAL RESULT_SNOMED RESULT_NUM RESULT_UNIT 
+		FACILITY_TYPE PROVIDER_TYPE 
+		NORM_RANGE_LOW NORM_RANGE_HIGH ABN_IND
+		PROVIDERID PROVIDERID_TYPE FACILITYID FACILITY_TYPE;
+run;
+%MEND;
+
+/* ------------- 2016 ------------ */
+
+proc printto log="&outpath.\&outfolder.\log_STD_LAB_2016_&verDate..log"  print="&outpath.\&outfolder.\log_STD_LAB_2016_&verDate..lst" new ; run;* direct log to a local file;
+
+%PULL_LAB_R(M16,MDCRR161,16_RMDCR,ENROLID SEQNUM LOINCCD PROC1 PROCTYP SVCDATE RESLTCAT RESULT RESUNIT REFLOW REFHIGH ABNORMAL STDPLAC PROVID STDPROV AGE);
+%PULL_LAB_R(M16,CCAER161,16_RCCAE,ENROLID SEQNUM LOINCCD PROC1 PROCTYP SVCDATE RESLTCAT RESULT RESUNIT REFLOW REFHIGH ABNORMAL STDPLAC PROVID STDPROV AGE);
+
+%COMBINE_LAB_BY_YEAR(16);*got 78623989 from 66178877(ccae) & 12445112(mdcr) cost 11:20;
+
+proc printto;run;quit;
+
+/* ------------- 2015 ------------ */
+
+proc printto log="&outpath.\&outfolder.\log_STD_LAB_2015_&verDate..log"  print="&outpath.\&outfolder.\log_STD_LAB_2015_&verDate..lst" new ; run;* direct log to a local file;
+
+%PULL_LAB_R(MSCN2015,MDCRR151,15_RMDCR,ENROLID SEQNUM LOINCCD PROC1 PROCTYP SVCDATE RESLTCAT RESULT RESUNIT REFLOW REFHIGH ABNORMAL STDPLAC PROVID STDPROV AGE);
+%PULL_LAB_R(MSCN2015,CCAER151,15_RCCAE,ENROLID SEQNUM LOINCCD PROC1 PROCTYP SVCDATE RESLTCAT RESULT RESUNIT REFLOW REFHIGH ABNORMAL STDPLAC PROVID STDPROV AGE);
+
+%COMBINE_LAB_BY_YEAR(15);*got 78623989 from 66178877(ccae) & 12445112(mdcr) cost 11:20;
+
+proc printto;run;quit;
+
+/* ------------- 2014 ------------ */
+
+proc printto log="&outpath.\&outfolder.\log_STD_LAB_2014_&verDate..log"  print="&outpath.\&outfolder.\log_STD_LAB_2014_&verDate..lst" new ; run;* direct log to a local file;
+
+%PULL_LAB_R(MSCN14,MDCRR141,14_RMDCR,ENROLID SEQNUM LOINCCD PROC1 PROCTYP SVCDATE RESLTCAT RESULT RESUNIT REFLOW REFHIGH ABNORMAL STDPLAC PROVID STDPROV AGE);
+%PULL_LAB_R(MSCN14,CCAER141,14_RCCAE,ENROLID SEQNUM LOINCCD PROC1 PROCTYP SVCDATE RESLTCAT RESULT RESUNIT REFLOW REFHIGH ABNORMAL STDPLAC PROVID STDPROV AGE);
+
+%COMBINE_LAB_BY_YEAR(14);*got 78623989 from 66178877(ccae) & 12445112(mdcr) cost 11:20;
+
+proc printto;run;quit;
+
+/* ------------- 2013 ------------ */
+
+proc printto log="&outpath.\&outfolder.\log_STD_LAB_2013_&verDate..log"  print="&outpath.\&outfolder.\log_STD_LAB_2013_&verDate..lst" new ; run;* direct log to a local file;
+
+%PULL_LAB_R(MSCN15,MDCRR132,13_RMDCR,ENROLID SEQNUM LOINCCD PROC1 PROCTYP SVCDATE RESLTCAT RESULT RESUNIT REFLOW REFHIGH ABNORMAL STDPLAC PROVID STDPROV AGE);
+%PULL_LAB_R(MSCN15,CCAER132,13_RCCAE,ENROLID SEQNUM LOINCCD PROC1 PROCTYP SVCDATE RESLTCAT RESULT RESUNIT REFLOW REFHIGH ABNORMAL STDPLAC PROVID STDPROV AGE);
+
+%COMBINE_LAB_BY_YEAR(13);*got 78623989 from 66178877(ccae) & 12445112(mdcr) cost 11:20;
+
+proc printto;run;quit;
+
+/* ------------- 2012 ------------ */
+
+proc printto log="&outpath.\&outfolder.\log_STD_LAB_2012_&verDate..log"  print="&outpath.\&outfolder.\log_STD_LAB_2012_&verDate..lst" new ; run;* direct log to a local file;
+
+%PULL_LAB_R(MSCN15,MDCRR123,12_RMDCR,ENROLID SEQNUM LOINCCD PROC1 PROCTYP SVCDATE RESLTCAT RESULT RESUNIT REFLOW REFHIGH ABNORMAL STDPLAC PROVID STDPROV AGE);
+%PULL_LAB_R(MSCN15,CCAER123,12_RCCAE,ENROLID SEQNUM LOINCCD PROC1 PROCTYP SVCDATE RESLTCAT RESULT RESUNIT REFLOW REFHIGH ABNORMAL STDPLAC PROVID STDPROV AGE);
+
+%COMBINE_LAB_BY_YEAR(12);*got 78623989 from 66178877(ccae) & 12445112(mdcr) cost 11:20;
+
+proc printto;run;quit;
+
+/* ------------- 2011 ------------ */
+
+proc printto log="&outpath.\&outfolder.\log_STD_LAB_2011_&verDate..log"  print="&outpath.\&outfolder.\log_STD_LAB_2011_&verDate..lst" new ; run;* direct log to a local file;
+
+%PULL_LAB_R(MSCN15,MDCRR113,11_RMDCR,ENROLID SEQNUM LOINCCD PROC1 PROCTYP SVCDATE RESLTCAT RESULT RESUNIT REFLOW REFHIGH ABNORMAL STDPLAC PROVID STDPROV AGE);
+%PULL_LAB_R(MSCN15,CCAER113,11_RCCAE,ENROLID SEQNUM LOINCCD PROC1 PROCTYP SVCDATE RESLTCAT RESULT RESUNIT REFLOW REFHIGH ABNORMAL STDPLAC PROVID STDPROV AGE);
+
+%COMBINE_LAB_BY_YEAR(11);*got 78623989 from 66178877(ccae) & 12445112(mdcr) cost 11:20;
+
+proc printto;run;quit;
+
+/* ------------- 2010 ------------ */
+
+proc printto log="&outpath.\&outfolder.\log_STD_LAB_2010_&verDate..log"  print="&outpath.\&outfolder.\log_STD_LAB_2010_&verDate..lst" new ; run;* direct log to a local file;
+
+%PULL_LAB_R(MSCN15,MDCRR101,10_RMDCR,ENROLID SEQNUM LOINCCD PROC1 PROCTYP SVCDATE RESLTCAT RESULT RESUNIT REFLOW REFHIGH ABNORMAL STDPLAC PROVID STDPROV AGE);
+%PULL_LAB_R(MSCN15,CCAER101,10_RCCAE,ENROLID SEQNUM LOINCCD PROC1 PROCTYP SVCDATE RESLTCAT RESULT RESUNIT REFLOW REFHIGH ABNORMAL STDPLAC PROVID STDPROV AGE);
+
+%COMBINE_LAB_BY_YEAR(10);*got 78623989 from 66178877(ccae) & 12445112(mdcr) cost 11:20;
+
+proc printto;run;quit;
