@@ -1,0 +1,398 @@
+/* STD_ENROLLMENT_MKS16_180108 */
+
+%inc "M:\studies\MarketScan1\formats\libname.txt";
+%inc "M:\studies\MarketScan1\pgms\Shuo\libname_sy.txt";
+
+%let raw = ;
+%let vew = work ;
+%let wrk = ysms2 ;
+%let std = s_mks;
+
+%let outpath = M:\studies\MarketScan1\pgms\Shuo\results ;
+%let verDate = %sysfunc(today(),yymmdd6.) ;
+%let outfolder = &verDate.-MKS STD DEMO ;
+
+
+%macro mkdir(outpath,outfolder);
+	* CREATE WORK DIRECTORY FOR OUTPUT IF IT DOES NOT EXIST;
+	%if %sysfunc(fileexist(&outpath.\&outfolder.)) ^= 1 %then %do;
+		options dlcreatedir;
+		libname output "&outpath.\&outfolder.";
+	%end;
+	%else %put &outpath.\&outfolder. already exists ;
+%mend mkdir;
+%mkdir(&outpath.,&outfolder.);
+
+
+/* ==================================================================================== */
+/*						Define PCORNET Variables & Necessary Others						*/
+
+%let _patID			= ENROLID ;
+%let _enrStartDate	= DTSTART ;
+%let _enrEndDate	= DTEND ;
+%let _chart			= ;
+%let _enrBasis		= ;
+%let _medical		= ;
+%let _pharmacy		= RX DRUGCOVG ; /*<--CCAE/MDCR IS 'RX'; MEDICAID IS 'DRUGCOVG'*/
+%let _partABMinusC	= ;
+%let _partD			= ;
+%let _source		= ;
+
+%MACRO PUL_ENRL_T_RXCV(RAW,DSTIN,DSTOUT,YEAR,DATES,MEDICAL,PHARMACY,RXDATA,RXDATE);
+
+data &WRK..PUL_ENRL_RXCV_YES_&YEAR._&DSTOUT.(compress=binary)
+	 &WRK..PRE_ENRL_RXCV_NO_&YEAR._&DSTOUT. (compress=binary);
+
+set &RAW..&DSTIN. ( keep=&_PATID. &DATES. &MEDICAL. &PHARMACY.
+					rename=(&pharmacy. = Pharmacy_) 
+					where=(not missing (&_PATID.) )
+					);
+
+	length ENRL_START_ ENRL_END_ 4 ;
+
+	format ENRL_START_ ENRL_END_ mmddyy10. ;
+
+	if Pharmacy_ ^= '1' then do;
+
+		if 0<month(&_ENRSTARTDATE.)<= month(&_ENRENDDATE.) then do mo=month(&_ENRSTARTDATE.) to month(&_ENRENDDATE.);		*<---REMEMBER TO CHANGE '1' OR 1 OR 'Y' ACCORDINGLY;
+			ENRL_START_	= mdy(mo,01,year(&_ENRSTARTDATE.));
+			if mo=12 then ENRL_END_ = mdy(12,31,year(&_ENRENDDATE.));
+			else ENRL_END_ = mdy(mo+1,01,year(&_ENRENDDATE.))-1;
+			output &WRK..PRE_ENRL_RXCV_NO_&YEAR._&DSTOUT.;
+		end;
+		else if month(&_ENRSTARTDATE.) > month(&_ENRENDDATE.) then do;
+			do mo=month(&_ENRSTARTDATE.) to 12;
+				ENRL_START_	= mdy(mo,01,year(&_ENRSTARTDATE.));
+				if mo=12 then ENRL_END_ = mdy(12,31,year(&_ENRENDDATE.));
+				else ENRL_END_ = mdy(mo+1,01,year(&_ENRENDDATE.))-1;
+				output &WRK..PRE_ENRL_RXCV_NO_&YEAR._&DSTOUT.;
+			end;
+			do mo=1 to month(&_ENRENDDATE.);
+				ENRL_START_	= mdy(mo,01,year(&_ENRSTARTDATE.));
+				if mo=12 then ENRL_END_ = mdy(12,31,year(&_ENRENDDATE.));
+				else ENRL_END_ = mdy(mo+1,01,year(&_ENRENDDATE.))-1;
+				output &WRK..PRE_ENRL_RXCV_NO_&YEAR._&DSTOUT.;
+			end;
+		end;
+	end;
+
+	else output &WRK..PUL_ENRL_RXCV_YES_&YEAR._&DSTOUT.;
+
+run;
+
+proc sort data=&WRK..PUL_ENRL_RXCV_YES_&YEAR._&DSTOUT. nodup;
+	by &_PATID. &DATES. Pharmacy_  ;
+run;
+proc sort data=&WRK..PRE_ENRL_RXCV_NO_&YEAR._&DSTOUT.(drop=dtstart dtend) nodup;
+	by &_PATID. ENRL_START_ ENRL_END_ Pharmacy_  ;
+run;
+
+proc sql;
+create table &WRK..PUL_ENRL_RXCV_NO_&YEAR._&DSTOUT.(compress=binary) as
+	select distinct a.*, /*b.&RXDATE. ,*/
+		case when sum(b.&RXDATE.)>0 then '1' else '0' end as Pharmacy_				/*<---REMEMBER TO CHANGE '1' OR 1 OR 'Y' ACCORDINGLY*/
+	from &WRK..PRE_ENRL_RXCV_NO_&YEAR._&DSTOUT.(drop=Pharmacy_ 
+												rename=(ENRL_START_=&_ENRSTARTDATE. ENRL_END_=&_ENRENDDATE.) ) as a
+	left join &RAW..&RXDATA.(keep=&_PATID. &RXDATE.
+							 where=(not missing (&_PATID.) and not missing (&RXDATE.) ) ) as b
+	on a.&_PATID.=b.&_PATID. and a.&_ENRSTARTDATE.<=b.&RXDATE.<=a.&_ENRENDDATE. 
+	group by a.&_PATID., a.&_ENRSTARTDATE. ;
+quit;
+
+%MEND;
+
+proc printto log="&outpath.\&outfolder.\log_std_ENRL_yearly_pul_&verDate..log"  print="&outpath.\&outfolder.\log_std_ENRL_yearly_pul_&verDate..lst" new ; run;* direct log to a local file;
+
+/* ---- 2016 ---- */
+%PUL_ENRL_T_RXCV(M16,MDCRT161,MDCRT,2016,&_ENRSTARTDATE. &_ENRENDDATE., ,RX,MDCRD161,SVCDATE);
+%PUL_ENRL_T_RXCV(M16,CCAET161,CCAET,2016,&_ENRSTARTDATE. &_ENRENDDATE., ,RX,CCAED161,SVCDATE);
+%PUL_ENRL_T_RXCV(M16,MEDICAID_T_2016_V1,MDCDT,2016,&_ENRSTARTDATE. &_ENRENDDATE., ,DRUGCOVG,MEDICAID_D_2016_V1,SVCDATE);
+%PUL_ENRL_T_RXCV(M16,MEDICAID_T_2015_V2,MDCDT,2015,&_ENRSTARTDATE. &_ENRENDDATE., ,DRUGCOVG,MEDICAID_D_2015_V2,SVCDATE);
+
+/* ---- 2015 ---- */
+%PUL_ENRL_T_RXCV(MSCN2015,MDCRT151,MDCRT,2015,&_ENRSTARTDATE. &_ENRENDDATE., ,RX,MDCRD151,SVCDATE);
+%PUL_ENRL_T_RXCV(MSCN2015,CCAET151,CCAET,2015,&_ENRSTARTDATE. &_ENRENDDATE., ,RX,CCAED151,SVCDATE);
+
+/* ---- 2014 ---- */
+%PUL_ENRL_T_RXCV(MSCN14,MDCRT141,MDCRT,2014,&_ENRSTARTDATE. &_ENRENDDATE., ,RX,MDCRD141,SVCDATE);
+%PUL_ENRL_T_RXCV(MSCN14,CCAET141,CCAET,2014,&_ENRSTARTDATE. &_ENRENDDATE., ,RX,CCAED141,SVCDATE);
+
+/* ---- 2013-2010 ---- */
+%PUL_ENRL_T_RXCV(MSCN15,MDCRT132,MDCRT,2013,&_ENRSTARTDATE. &_ENRENDDATE., ,RX,MDCRD132,SVCDATE);
+%PUL_ENRL_T_RXCV(MSCN15,CCAET132,CCAET,2013,&_ENRSTARTDATE. &_ENRENDDATE., ,RX,CCAED132,SVCDATE);
+
+%PUL_ENRL_T_RXCV(MSCN15,MDCRT123,MDCRT,2012,&_ENRSTARTDATE. &_ENRENDDATE., ,RX,MDCRD123,SVCDATE);
+%PUL_ENRL_T_RXCV(MSCN15,CCAET123,CCAET,2012,&_ENRSTARTDATE. &_ENRENDDATE., ,RX,CCAED123,SVCDATE);
+
+%PUL_ENRL_T_RXCV(MSCN15,MDCRT113,MDCRT,2011,&_ENRSTARTDATE. &_ENRENDDATE., ,RX,MDCRD113,SVCDATE);
+%PUL_ENRL_T_RXCV(MSCN15,CCAET113,CCAET,2011,&_ENRSTARTDATE. &_ENRENDDATE., ,RX,CCAED113,SVCDATE);
+
+%PUL_ENRL_T_RXCV(MSCN15,MDCRT103,MDCRT,2010,&_ENRSTARTDATE. &_ENRENDDATE., ,RX,MDCRD103,SVCDATE);
+%PUL_ENRL_T_RXCV(MSCN15,CCAET103,CCAET,2010,&_ENRSTARTDATE. &_ENRENDDATE., ,RX,CCAED103,SVCDATE);
+
+proc printto ; run; quit;
+
+%MACRO COMBINE_ENRL_BY_YEAR(YEAR,DATES);
+
+data &WRK..ENRL_&YEAR.(compress=binary) ;
+
+	length 	PATID 				$20
+			MEDICAL				$1
+			PHARMACY			$1
+			CHART				$1
+			ENR_BASIS			$1
+	;
+	label 	PATID 				= "Unique Patient Identification Number"
+			MEDICAL				= "Availability of Medical Coverage"
+			PHARMACY			= "Availability of Pharmacy Coverage"
+			CHART				= "Are You Able to Request(or Review) Charts for This Person"
+			ENR_BASIS			= "The Basis on Which the Complete Capture is Asserted"
+	;
+set &WRK..PUL_ENRL_RXCV_YES_&YEAR._: 
+	&WRK..PUL_ENRL_RXCV_NO_&YEAR._: ;
+
+	by &_PATID. &DATES. &_MEDICAL. Pharmacy_ ;
+
+	PATID			= strip(put(&_PATID.,20.)) ;
+	MEDICAL			= "Y" ;						*<---REMEBER TO CHANGE DEF ACCORDINGLY;
+	if Pharmacy_ 	= '1' then PHARMACY = "Y";
+	else PHARMACY 	= "N" ;
+	CHART			= "N" ;
+	ENR_BASIS		= "I" ;
+
+	keep PATID &DATES. MEDICAL PHARMACY CHART ENR_BASIS ;
+
+run;
+
+proc sort data= &WRK..ENRL_&YEAR. nodup ;
+	by PATID &DATES. MEDICAL PHARMACY CHART ENR_BASIS ;
+run;
+%MEND;
+
+proc printto log="&outpath.\&outfolder.\log_std_ENRL_COMBINE_yearly_pul_&verDate..log"  print="&outpath.\&outfolder.\log_std_ENRL_COMBINE_yearly_pul_&verDate..lst" new ; run;* direct log to a local file;
+
+%COMBINE_ENRL_BY_YEAR(2016,&_enrStartDate. &_enrEndDate.);
+%COMBINE_ENRL_BY_YEAR(2015,&_enrStartDate. &_enrEndDate.);
+%COMBINE_ENRL_BY_YEAR(2014,&_enrStartDate. &_enrEndDate.);
+%COMBINE_ENRL_BY_YEAR(2013,&_enrStartDate. &_enrEndDate.);
+%COMBINE_ENRL_BY_YEAR(2012,&_enrStartDate. &_enrEndDate.);
+%COMBINE_ENRL_BY_YEAR(2011,&_enrStartDate. &_enrEndDate.);
+%COMBINE_ENRL_BY_YEAR(2010,&_enrStartDate. &_enrEndDate.);
+
+proc printto ; run; quit;
+
+%MACRO COMPRESS_ENRL_PERIOD_BY_YEAR(YEAR);
+
+data &WRK..ENRL_COMPRESS_&YEAR.(compress=binary);
+
+set &WRK..ENRL_&YEAR.(where=(MEDICAL='Y' and PHARMACY='Y')) ;
+
+	length 	ENRL_START_		4
+			ENRL_END_		4
+			;
+
+	by PATID &_enrStartDate. &_enrEndDate. MEDICAL PHARMACY ;
+
+	length 	PRE_enrStartDate PRE_ENRL_END 4
+			PRE_MEDICAL PRE_PHARMACY $1 ;
+
+	retain enrl_start_ ;
+
+	PRE_ENRL_START	= lag(&_enrStartDate.) ;
+	PRE_ENRL_END	= lag(&_enrEndDate.) ; 
+	PRE_MEDICAL		= LAG(MEDICAL) ;
+	PRE_PHARMACY	= LAG(PHARMACY) ;
+
+	if first.PATID then do;
+		PRE_ENRL_START	= . ;
+		PRE_ENRL_END	= . ;
+		PRE_MEDICAL		= '' ;
+		PRE_PHARMACY	= '' ;
+		ENRL_START_		= &_enrStartDate. ;
+	end;
+
+	else do;
+		if 	MEDICAL 	^= PRE_MEDICAL		or
+			PHARMACY	^= PRE_PHARMACY 	or
+			&_enrStartDate. - 1 - 31 > PRE_ENRL_END		/*&ENRL_START.-1 > intnx('month',PRE_ENRL_END,1,'same')*/ 
+		then ENRL_START_ = &_enrStartDate. ;
+	end;
+
+	format enrl_start_ enrl_end_ PRE_ENRL_START PRE_ENRL_END mmddyy10. ;
+
+	keep PATID &_enrStartDate. &_enrEndDate. ENRL_START_ ENRL_END_ MEDICAL PHARMACY CHART ENR_BASIS ;
+run;
+
+proc sort data=&WRK..ENRL_COMPRESS_&YEAR. nodup;
+	by PATID ENRL_START_ &_enrEndDate. MEDICAL PHARMACY CHART ENR_BASIS;
+run;
+
+data &WRK..ENRL_COMPRESS_END_&YEAR. ;
+set &WRK..ENRL_COMPRESS_&YEAR. ;
+	by PATID ENRL_START_ &_enrEndDate. ;
+	if last.enrl_start_ then do;
+	ENRL_END_ = &_enrEndDate. ;
+	output;
+	end;
+	drop &_enrStartDate. &_enrEndDate.;
+run;
+%MEND;
+
+proc printto log="&outpath.\&outfolder.\log_std_ENRL_COMPRESS_yearly_pul_&verDate..log"  print="&outpath.\&outfolder.\log_std_ENRL_COMPRESS_yearly_pul_&verDate..lst" new ; run;* direct log to a local file;
+
+%COMPRESS_ENRL_PERIOD_BY_YEAR(2016);
+%COMPRESS_ENRL_PERIOD_BY_YEAR(2015);
+%COMPRESS_ENRL_PERIOD_BY_YEAR(2014);
+%COMPRESS_ENRL_PERIOD_BY_YEAR(2013);
+%COMPRESS_ENRL_PERIOD_BY_YEAR(2012);
+%COMPRESS_ENRL_PERIOD_BY_YEAR(2011);
+%COMPRESS_ENRL_PERIOD_BY_YEAR(2010);
+
+
+data &VEW..ENRL_COMPRS_ALLYEARS / VIEW=&VEW..ENRL_COMPRS_ALLYEARS ;
+
+set &WRK..ENRL_COMPRESS_END_: ;
+
+run;
+
+proc sort data=&VEW..ENRL_COMPRS_ALLYEARS nodup
+		  out =&WRK..ENRL_COMPRS_ALLYEARS(compress=binary);
+	by PATID ENRL_START_ ENRL_END_ MEDICAL PHARMACY CHART ENR_BASIS;
+run;
+
+data &WRK..ENRL_COMPRS_ALLYEARS_(compress=binary) ;
+
+set &WRK..ENRL_COMPRS_ALLYEARS ;
+
+	by PATID ENRL_START_ ENRL_END_ MEDICAL PHARMACY ;
+
+	length 	ENR_START_DATE		4
+			ENR_END_DATE		4
+			;
+
+	label 	ENR_START_DATE		= "Date of the Beginning of Continuous Enrollment Period"
+			ENR_END_DATE		= "Date of the End of the Continuous Enrollment Period"
+			;
+
+	length 	PRE_ENRL_START_ PRE_ENRL_END_ 4
+			PRE_MEDICAL PRE_PHARMACY $1 ;
+
+	retain ENR_START_DATE ;
+
+	PRE_ENRL_START_	= lag(ENRL_START_) ;
+	PRE_ENRL_END_	= lag(ENRL_END_) ; 
+	PRE_MEDICAL		= LAG(MEDICAL) ;
+	PRE_PHARMACY	= LAG(PHARMACY) ;
+
+	if first.PATID then do;
+		PRE_ENRL_START_	= . ;
+		PRE_ENRL_END_	= . ;
+		PRE_MEDICAL		= '' ;
+		PRE_PHARMACY	= '' ;
+		ENR_START_DATE	= ENRL_START_ ;
+	end;
+
+	else do;
+		if 	MEDICAL 	^= PRE_MEDICAL		or
+			PHARMACY	^= PRE_PHARMACY 	or
+			ENRL_START_-1-31 > PRE_ENRL_END_	/*ENRL_START_ > intnx('month',pre_enrl_end_,1,'same')*/
+		then ENR_START_DATE = ENRL_START_ ;
+	end;
+
+	format enr_start_date enr_end_date PRE_ENRL_START_ PRE_ENRL_END_ mmddyy10. ;
+
+	keep PATID ENR_START_DATE ENR_END_DATE ENRL_START_ ENRL_END_ MEDICAL PHARMACY CHART ENR_BASIS ;
+
+run;
+
+proc sort data=&WRK..ENRL_COMPRS_ALLYEARS_ nodup;
+	by PATID ENR_START_DATE ENRL_END_ MEDICAL PHARMACY CHART ENR_BASIS;
+run;
+
+data &WRK..ENRL_COMPRS_ALLYEARS_END(compress=binary) ;
+set &WRK..ENRL_COMPRS_ALLYEARS_ ;
+	by PATID ENR_START_DATE ENRL_END_ ;
+	if last.enr_start_date then do;
+	ENR_END_DATE = ENRL_END_ ;
+	output;
+	end;
+	drop ENRL_START_ ENRL_END_;
+run;
+
+proc sort data=&wrk..enrl_comprs_allyears_end nodup;
+	by PATID ENR_START_DATE ENR_END_DATE MEDICAL PHARMACY CHART ENR_BASIS;
+run;
+
+proc sort data= &wrk..ENRL_COMPRS_ALLYEARS_END(where=(pharmacy^='N')) NODUP
+		  out = &STD..ENROLLMENT(compress=binary alter="aDmSY18" index=(PATID ENR_START_DATE) 
+								label="Compressed Enrollment of All Years from MarketScan T files;PW=_AD_MSY18") ;
+by PATID ENR_START_DATE ENR_END_DATE MEDICAL PHARMACY CHART ENR_BASIS ;
+run;
+
+proc printto ; run; quit;
+
+
+
+
+
+/* ================================================================================ */
+/*								STD ENROLL QUICK FACTS								*/
+/* ================================================================================ */
+/* USE 	&WRK..ENRL_COMPRESS_END_&YEAR. 	AS YEARLY CLEANED ENRL DATA 
+		&WRK..ENRL_COMPRS_ALLYEARS		AS ALL YEARS CLEANED ENRL DATA
+*/
+
+ods html file="&outpath.\&outfolder.\STD_Enroll_Quick_Facts.html";
+
+proc sql;
+select count(distinct patid) as Uni_ID, count(patid) as Epi_Count,
+	round(sum(enr_end_date-enr_start_date)/365.25) as PersonYears
+	from &STD..ENROLL;
+select distinct year(enr_start_date) as Year, 
+	count(distinct patid) as Uni_ID, count(patid) as Epi_Count,
+	round(sum(enr_end_date-enr_start_date)/365.25) as PersonYears
+	from &STD..ENROLL
+		group by calculated year;
+quit;
+
+%macro newid_count;
+%do year=2011 %to 2014;
+proc sql;
+create table &WRK..enrl_newid_single_&year. as
+select distinct &year. as Year, 
+	count(distinct patid) as New_Uni_ID_from_Last_Year, count(patid) as New_Epi_from_Last_Year,
+	round(sum(enr_end_date-enr_start_date)/365.25) as New_PersonYears_from_Last_Year
+	from &STD..ENROLL
+	  where year(enr_start_date)=&year. and patid not in 
+		(select distinct patid from &std..enroll where year(enr_start_date)=&year.-1);
+
+create table &WRK..enrl_newid_allpre_&year. as
+select distinct &year. as Year, 
+	count(distinct patid) as New_Uni_ID_from_AllPre_Year, count(patid) as New_Epi_from_AllPre_Year,
+	round(sum(enr_end_date-enr_start_date)/365.25) as New_PersonYears_from_AllPre_Year
+	from &STD..ENROLL
+	  where year(enr_start_date)=&year. and patid not in 
+		(select distinct patid from &std..enroll where year(enr_start_date)<&year.);
+quit;
+%end;
+
+data &WRK..enrl_newid_single_allyears;
+set &WRK..enrl_newid_single_:;
+run;
+
+data &WRK..enrl_newid_allpre_allyears;
+set &WRK..enrl_newid_allpre_:;
+run;
+
+data &WRK..enrl_newid_all;
+merge &WRK..enrl_newid_single_allyears
+	  &WRK..enrl_newid_allpre_allyears;
+by year;
+run;
+%mend;
+%newid_count;
+
+proc print data=&WRK..enrl_newid_all noobs;
+run;
+
+ods html close;
