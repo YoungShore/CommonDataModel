@@ -1,0 +1,369 @@
+
+/* ================================================================ */
+/*						Define SAS Libraries						*/
+
+%inc "M:\studies\MarketScan1\formats\libname.txt";
+%inc "M:\studies\MarketScan1\pgms\Shuo\libname_sy.txt";
+%inc "M:\studies\MarketScan1\pgms\Shuo\STD_Formats_MKS_180112.sas";
+
+%let raw = ;
+%let vew = dt64 ;
+%let wrk = ysms2 ;
+%let std = s_mks;
+
+%let outpath = M:\studies\MarketScan1\pgms\Shuo\results ;
+%let verDate = %sysfunc(today(),yymmdd6.) ;
+%let outfolder = &verDate.-MKS STD RX ;
+
+
+%macro mkdir(outpath,outfolder);
+	* CREATE WORK DIRECTORY FOR OUTPUT IF IT DOES NOT EXIST;
+	%if %sysfunc(fileexist(&outpath.\&outfolder.)) ^= 1 %then %do;
+		options dlcreatedir;
+		libname output "&outpath.\&outfolder.";
+	%end;
+	%else %put &outpath.\&outfolder. already exists ;
+%mend mkdir;
+%mkdir(&outpath.,&outfolder.); 
+
+%let _PATID					= PUT(ENROLID,20.) ;
+%let _DISPENSINGID			= PUT(SEQNUM,15.) ;
+%let _DISPENSEDATE			= SVCDATE ;
+%let _NDC					= NDCNUM ;
+%let _DISPENSESUP			= DAYSUPP ;
+%let _DISPENSEAMT			= METQTY ;
+%let _DISPENSEDOSEDISP		= _NA_;
+%let _DISPENSEDOSEDISPUNIT	= _NA_;
+%let _DISPENSEROUTE			= MSTFMDS ;	/*<-from 'Redbook' file*/
+%let _GNN					= GENNME ;	/*<-from 'Redbook' file*/
+%let _STRENGTH				= STRNGTH ;	/*<-from 'Redbook' file*/
+%let _PRESCRIBERID			= _NA_ ;
+%let _PRESCRIBERIDTYPE		= _NA_ ;
+%let _PRESCRIBINGID			= _NA_ ;
+%let _PHARMACYID			= PUT(PHARMID,15.) ;
+%let _SOURCE				= ;
+
+/*
+%macro prepare_redbook(RAWLIB,NDC);
+
+proc sort data=&RAW..REDBOOK(pw=&pw.) 
+		  out =&STD..redbook;									/*<<<<<<<<<<<< ADD/DROP PASSWORD AS NEEDED <<<<<<<<<<<<*
+by &_NDC. ;
+run;
+%mend;
+%prepare_redbook(MS_16_1,NDCNUM);
+*/
+
+/* ***************************** RX ****************************** */
+
+%MACRO PUL_RX_D(RAW,DSTIN,DSTOUT,KEPVARS); 
+
+data &VEW..PUL_RX_&DSTOUT. / view=&VEW..PUL_RX_&DSTOUT. ;
+
+length 	_PATID 				$20
+		_DISPENSINGID		$15
+       	_DISPENSE_DATE 		4
+/*		GNN					$50 */
+	   	_NDC 				$11
+	   	_DISPENSE_SUP 		8
+	   	_DISPENSE_AMT 		8
+		_DISPENSE_DOSE_DISP	8
+		_DISPENSE_DOSE_DISP_UNIT	$20
+/*		STRENGTH			$30 */
+	   	_PRESCRIBERID 		$20 
+	   	_PRESCRIBERID_TYPE $4 
+		_PRESCRIBINGID		$15
+		_PHARMACYID		$16
+		_SOURCE 			$5
+		AGE					3 
+;
+
+label 	_PATID						= "Unique Patient Identification Number"
+		_DISPENSINGID				= "Dispensing ID"
+      	_DISPENSE_DATE				= "Dispensing Date"
+/*		GNN							= "Generic Name" */
+	  	_NDC						= "National Drug Code"
+	  	_DISPENSE_SUP				= "Days Supply"
+	  	_DISPENSE_AMT				= "Number of Units (pills, tablets, vials) Dispensed" 
+		_DISPENSE_DOSE_DISP			= "Dose of a Given Med as Dispensed"
+		_DISPENSE_DOSE_DISP_UNIT	= "Units of the Dispensed Dose"
+/*		STRENGTH					= "Strength" */
+	  	_PRESCRIBERID 				= "Prescriber ID"
+	  	_PRESCRIBERID_TYPE			= "Prescriber ID Type"
+		_PRESCRIBINGID				= "Prescribing(Table) ID"
+		_PHARMACYID					= "Pharmacy ID"
+		_SOURCE						= "Data Source"
+;
+     
+set &RAW..&DSTIN.( 	keep = &KEPVARS. 
+					where=((strip(&_PATID.) not in ('.','') ) and
+							strip(&_NDC.) not in ('00000000000','') )
+				 );
+
+_PATID						= compress(&_PATID.,'. ') ;
+_DISPENSINGID				= compress(&_DISPENSINGID.,'. ') ;
+
+_DISPENSE_DATE				= &_DISPENSEDATE. ;
+
+*GNN						= &GNN. ;
+_NDC						= compress(&_NDC.,'. ') ;
+_DISPENSE_SUP				= &_DISPENSESUP. ;
+_DISPENSE_AMT				= &_DISPENSEAMT. ;
+_DISPENSE_DOSE_DISP 		= &_DISPENSEDOSEDISP. ;
+_DISPENSE_DOSE_DISP_UNIT	= compress(&_DISPENSEDOSEDISPUNIT.,'. ') ;
+*STRENGTH					= &STRNTH. ;
+
+_PRESCRIBERID 				= compress(&_PRESCRIBERID.,'. ') ;
+_PRESCRIBERID_TYPE			= compress(&_PRESCRIBERIDTYPE.,'. ') ;
+_PRESCRIBINGID				= compress(&_PRESCRIBINGID.,'. ') ;
+_PHARMACYID					= compress(&_PHARMACYID.,'. ') ;
+
+_SOURCE			= upcase(strip(scan("&dstout.",-1,'_'))) ;
+
+format _DISPENSE_DATE mmddyy10.; 
+
+keep _PATID			_DISPENSINGID
+	 _NDC 			_DISPENSE_DATE 		_DISPENSE_SUP 	_DISPENSE_AMT 	_DISPENSE_DOSE_DISP _DISPENSE_DOSE_DISP_UNIT
+	 _PRESCRIBERID 	_PRESCRIBERID_TYPE 	_PRESCRIBINGID	_PHARMACYID 
+	 _SOURCE 		AGE
+;
+run;
+
+proc sort data=&VEW..PUL_RX_&DSTOUT. nodup 
+		  out =&WRK..PUL_RX_&DSTOUT. ;
+by 	_ndc 
+	_patid 			_dispensingid 
+	_dispense_date 	_dispense_sup 		_dispense_amt 
+	_PRESCRIBERID 	_PRESCRIBERID_TYPE 	_PRESCRIBINGID	_PHARMACYID 
+	_source 		AGE
+;
+run;
+
+data &VEW..RX_GNN_&DSTOUT. / view=&VEW..RX_GNN_&DSTOUT. ;
+merge &WRK..PUL_RX_&DSTOUT. (in=a) 
+	  &RAW..redbook (in=b keep=&_NDC. &_rawGNN. &_rawSTRENGTH. 	&_rawRoute.			/*<<<<<<<<<<<< ADD/DROP PASSWORD AS NEEDED <<<<<<<<<<<<*/
+					rename=(&_NDC.=_NDC) );
+by _NDC;
+length	RAW_GNN				$50
+		_STRENGTH			$30
+		_DISPENSE_ROUTE		$15
+;
+label 	RAW_GNN				= "Generic Name"
+		_STRENGTH			= "Strength"
+		_DISPENSE_ROUTE		= "Route of Delivery"
+;
+RAW_GNN			= strip(&_rawGNN.) ;
+_STRENGTH		= strip(&_STRENGTH.) ;
+_DISPENSE_ROUTE	= strip(&_DISPENSERoute.) ;
+
+if a ;
+
+keep _PATID 				_DISPENSINGID 
+	 _DISPENSE_DATE 		_NDC 						_DISPENSE_SUP 		_DISPENSE_AMT	
+	 _DISPENSE_DOSE_DISP 	_DISPENSE_DOSE_DISP_UNIT	_DISPENSE_ROUTE		_STRENGTH
+	 _PRESCRIBERID 			_PRESCRIBERID_TYPE 			_PRESCRIBINGID		_PHARMACYID 		_SOURCE
+	 RAW_: ;
+run;
+%MEND;
+
+
+************************** Create Permanent Datasets by Year ************************;
+
+
+%MACRO RXYEAR(YR);
+data &VEW..DISPENSING&YR. / VIEW=&VEW..DISPENSING&YR. ;
+set	 &VEW..RX_GNN_&YR._D: ;
+rename	_PATID						= PATID
+		_DISPENSINGID				= DISPENSINGID
+		_DISPENSE_DATE 				= DISPENSE_DATE
+		_NDC 						= NDC
+		_DISPENSE_SUP 				= DISPENSE_SUP
+		_DISPENSE_AMT 				= DISPENSE_AMT
+		_DISPENSE_DOSE_DISP			= DISPENSE_DOSE_DISP
+		_DISPENSE_DOSE_DISP_UNIT	= DISPENSE_DOSE_DISP_UNIT
+		_DISPENSE_ROUTE				= DISPENSE_ROUTE
+		_STRENGTH					= STRENGTH
+	 	_PRESCRIBERID 				= PRESCRIBERID
+		_PRESCRIBERID_TYPE			= PRESCRIBERID_TYPE
+		_PRESCRIBINGID				= PRESCRIBINGID
+		_PHARMACYID					= PHARMACYID
+		_SOURCE 					= SOURCE ;
+run;
+
+proc sort data=&VEW..DISPENSING&YR.
+		  out =&STD..DISPENSING&YR. (compress=binary alter="aDmSY18" index=(PATID DISPENSE_DATE NDC )
+									label="Year &YR. RX Data from MarketScan D Files" )
+		  nodup;
+by 	PATID 			DISPENSE_DATE 	
+	NDC 			DISPENSE_SUP 		DISPENSE_AMT 	DISPENSE_DOSE_: 
+	PRESCRIBERID 	PRESCRIBERID_TYPE 	PRESCRIBINGID
+	PHARMACYID 		SOURCE
+	RAW_: ;
+run;
+
+%MEND;
+
+/* -------------- 2016 -------------- */
+%PUL_RX_D(M16,MDCRD161,16_DMDCR,ENROLID SEQNUM SVCDATE NDCNUM DAYSUPP METQTY PHARMID AGE);
+%PUL_RX_D(M16,CCAED161,16_DCCAE,ENROLID SEQNUM SVCDATE NDCNUM DAYSUPP METQTY PHARMID AGE);
+%PUL_RX_D(M16,MEDICAID_D_2016_V1,16_DMDCD,ENROLID SEQNUM SVCDATE NDCNUM DAYSUPP METQTY PHARM_ID);
+
+%RXYEAR(16); * got 410267354 from 228493867(ccae),12693984(mdcd), 54809503(mdcr) cost 40:53 ;
+
+/* -------------- 2015 -------------- */
+%PUL_RX_D(MSCN2015,MDCRD151,15_DMDCR,ENROLID SEQNUM SVCDATE NDCNUM DAYSUPP METQTY PHARMID AGE);
+%PUL_RX_D(MSCN2015,CCAED151,15_DCCAE,ENROLID SEQNUM SVCDATE NDCNUM DAYSUPP METQTY PHARMID AGE);
+%PUL_RX_D(M16,MEDICAID_D_2015_V2,15_DMDCD,ENROLID SEQNUM SVCDATE NDCNUM DAYSUPP METQTY PHARM_ID);
+
+%RXYEAR(15);
+
+/* ------------- 2014 -------------- */
+%PUL_RX_D(MSCN14,MDCRD141,14_DMDCR,ENROLID SEQNUM SVCDATE NDCNUM DAYSUPP METQTY PHARMID AGE);
+%PUL_RX_D(MSCN14,CCAED141,14_DCCAE,ENROLID SEQNUM SVCDATE NDCNUM DAYSUPP METQTY PHARMID AGE);
+
+%RXYEAR(14); 
+
+/* ------------- 2013 -------------- */
+%PUL_RX_D(MSCN15,MDCRD132,13_DMDCR,ENROLID SEQNUM SVCDATE NDCNUM DAYSUPP METQTY PHARMID AGE);
+%PUL_RX_D(MSCN15,CCAED132,13_DCCAE,ENROLID SEQNUM SVCDATE NDCNUM DAYSUPP METQTY PHARMID AGE);
+
+%RXYEAR(13); 
+
+/* ------------- 2012 -------------- */
+%PUL_RX_D(MSCN15,MDCRD123,12_DMDCR,ENROLID SEQNUM SVCDATE NDCNUM DAYSUPP METQTY PHARMID AGE);
+%PUL_RX_D(MSCN15,CCAED123,12_DCCAE,ENROLID SEQNUM SVCDATE NDCNUM DAYSUPP METQTY PHARMID AGE);
+
+%RXYEAR(12); 
+
+/* ------------- 2011 -------------- */
+%PUL_RX_D(MSCN15,MDCRD113,11_DMDCR,ENROLID SEQNUM SVCDATE NDCNUM DAYSUPP METQTY PHARMID AGE);
+%PUL_RX_D(MSCN15,CCAED113,11_DCCAE,ENROLID SEQNUM SVCDATE NDCNUM DAYSUPP METQTY PHARMID AGE);
+
+%RXYEAR(11); 
+
+/* ------------- 2010 -------------- */
+%PUL_RX_D(MSCN15,MDCRD103,10_DMDCR,ENROLID SEQNUM SVCDATE NDCNUM DAYSUPP METQTY PHARMID AGE);
+%PUL_RX_D(MSCN15,CCAED103,10_DCCAE,ENROLID SEQNUM SVCDATE NDCNUM DAYSUPP METQTY PHARMID AGE);
+
+%RXYEAR(10); 
+
+/* ==================================================================== */
+/*								QUICK FACTS								*/
+/* ==================================================================== */
+
+%let folder = U:\studies\AS\shared\shuo\Results\20161018-STD Quick Facts ;
+
+libname ndc "W:\onenote\references\Drug NDCs\SAS Data";
+
+%MACRO PULL_MEDS_BY_NDC_PX(MED,YEAR);
+proc sql;
+create table &SPDE..ndc_&med._&year. as
+select distinct b.patid, b.source, b.DISPENSE_DATE, b.NDC, b.DISPENSE_SUP, b.DISPENSE_AMT, 
+		a.gnn as GNN_NDB, a.str as Str_NDB
+from ndc.ndc_&med.(where=(strip(codetype)="NDC" and rt^='OPHTHALMIC')) as a
+left join &std..rx_&year. as b
+on strip(a.code)=strip(b.ndc)
+where strip(b.patid)^='';
+quit;
+
+proc sql;
+create table &SPDE..px_&med._&year. as
+select distinct b.patid, b.source, b.BEGIN_DATE as DISPENSE_DATE format mmddyy10., b.px,
+		a.gnn as GNN_NDB, a.str as Str_NDB
+from ndc.ndc_&med.(where=(strip(codetype)="HCPCS" and rt^='OPHTHALMIC')) as a
+left join &std..px_&year. as b
+on strip(a.code)=strip(b.px)
+where strip(b.patid)^='';
+quit;
+
+data &spde..rx_px_&med._&year.;
+set &spde..ndc_&med._&year.
+	&spde..px_&med._&year.;
+Year=&year.;
+run;
+
+proc sort data=&spde..rx_px_&med._&year. nodup;
+by patid source dispense_date gnn_ndb ndc px str_ndb;
+run;
+
+%MEND;
+
+
+%MACRO RUN_PULL_NDC_MED(MED);
+
+%do year=2010 %to 2014;
+
+%PULL_MEDS_BY_NDC_PX(&MED.,&YEAR.);
+
+%end;
+
+data &spde..rxpx_allyrs_&med.;
+set &spde..rx_px_&med._: ;
+run;
+
+%MACRO RUN_PULL_NDC_MED(MED);
+
+proc sql;
+create table &spde..rxpx_all_cnts_&med. as
+select distinct year, gnn_ndb, count(distinct patid) as UniIDs
+from &spde..rxpx_allyrs_&med.
+group by year, gnn_ndb;
+quit;
+
+proc transpose data=&spde..rxpx_all_cnts_&med.
+				out=&spde..medcnts_trans_&med.(drop=_name_);
+id year;
+var uniIDs;
+by gnn_ndb;
+run;
+
+ods html file="&folder.\STD_RxPx_&MED._User_Counts.html";
+
+title "Patients Counts of Using Interested Meds & DaySupply / Quantity Distribution";
+
+proc print data=&spde..medcnts_trans_&med. noobs;
+run;
+
+proc means data=&spde..rxpx_allyrs_&med. maxdec=1 n nmiss mean std min p1 p5 p10 q1 median q3 p90 p95 p99 max;
+class year gnn_ndb;
+var DISPENSE_SUP DISPENSE_AMT;
+run;
+
+ods html close;title;
+
+
+%MEND;
+
+%RUN_PULL_NDC_MED(DMARD_BIO_ALL);
+%RUN_PULL_NDC_MED(ANTIBIOTICS);
+%RUN_PULL_NDC_MED(ANTICOAGULANTS);
+%RUN_PULL_NDC_MED(BETABLOCKERS);
+%RUN_PULL_NDC_MED(BISPHOSPHONATES);
+%RUN_PULL_NDC_MED(NARCOTICS);
+%RUN_PULL_NDC_MED(NSAIDCOX);
+%RUN_PULL_NDC_MED(NSAIDNONCOX);
+%RUN_PULL_NDC_MED(ORALSTEROIDS);
+%RUN_PULL_NDC_MED(STATINS);
+
+
+data &spde..rxpx_all_pull;
+set &spde..rxpx_allyrs_:(where=(not missing(patid))) ;
+run;
+
+
+ods html file="&folder.\STD_Meds(RxPx)_User_Counts.html";
+
+title "Patients Counts of Using Interested Meds & DaySupply / Quantity Distribution";
+
+proc sql;
+select distinct year, gnn_ndb, count(distinct patid) as UniIDs
+from &spde..rxpx_all_pull
+group by year, gnn_ndb;
+quit;
+
+proc means data=&spde..rxpx_all_pull maxdec=1 n nmiss mean std min p1 p5 p10 q1 median q3 p90 p95 p99 max;
+class year gnn_ndb;
+var DISPENSE_SUP DISPENSE_AMT;
+run;
+
+ods html close;title;
