@@ -1,7 +1,9 @@
 %let charVars	= 	admitting_Source admit_type diagnosisID discharge_disposition discharge_status drg drg_type 
-					        dx dx_origin dx_poa dx_source dx_type enchounterID enc_type facilityID facility_location facility_type 
-					        patID pdx providerID providerID_Type provider_type source ;
+					dx dx_origin dx_poa dx_source dx_type encounterID enc_type facilityID facility_location facility_type 
+					patID pdx providerID providerID_Type provider_type source ;
+
 %let numVars	= 	age ;
+
 %let datimVars	= 	admit_date admit_time discharge_date discharge_time ;
 
 proc format ;
@@ -15,10 +17,10 @@ proc format ;
 	;
 run;
 
-%macro varMisChek(fil,yrStrt,yrEnd)
+%macro varMisChek(fil,yrStrt,yrEnd);
 
 ods html body = "STD &fil. &yrStrt. To &yrEnd. Variables' Missing Check-&verdate..html"
-		 path = "&outpat.\&outfolder." ;
+		 path = "&outpath.\&outfolder." (url=none);
 
   %do year = &yrStrt. %to &yrEnd. ;
 	proc freq data= &std..&fil.&year. ;
