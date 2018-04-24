@@ -1,0 +1,34 @@
+%let charVars	= 	admitting_Source admit_type diagnosisID discharge_disposition discharge_status drg drg_type 
+					        dx dx_origin dx_poa dx_source dx_type enchounterID enc_type facilityID facility_location facility_type 
+					        patID pdx providerID providerID_Type provider_type source ;
+%let numVars	= 	age ;
+%let datimVars	= 	admit_date admit_time discharge_date discharge_time ;
+
+proc format ;
+	value $mis_c
+		'.', ' ', '' = 'Missing'
+		other		 = 'NonMiss'
+	;
+	value mis_n
+		.			 = 'Missing'
+		other		 = 'NonMiss'
+	;
+run;
+
+%macro varMisChek(fil,yrStrt,yrEnd)
+
+ods html body = "STD &fil. &yrStrt. To &yrEnd. Variables' Missing Check-&verdate..html"
+		 path = "&outpat.\&outfolder." ;
+
+  %do year = &yrStrt. %to &yrEnd. ;
+	proc freq data= &std..&fil.&year. ;
+	table &charVars. &numVars. &datimVars. / missing ;
+	format &charVars. $mis_c. &numVars. &datimVars. mis_n. ;
+	title "Variables' Missing Check on &year. Standardized &fil." ;
+	run ; title ;
+  %end;
+
+ods html close;
+
+%mend;
+%varMisChek(Diagnosis,2006,2006);
