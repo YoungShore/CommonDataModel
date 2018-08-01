@@ -5,84 +5,84 @@
 
 /* =========================== Diagnosis (DX) Variables Settings ====================== */
 
-%let _patID 				        = PUT(ENROLID,20.) ;
-%let _encounterID			      = PUT(CASEID,15.) ;
-%let _admitDate				      = COALESCE(ADMDATE,SVCDATE) ;
-%let _admitTime				      = _NA_;
-%let _dischargeDate			    = COALESCE(DISDATE,TSVCDAT) ;
-%let _dischargeTime			    = _NA_;
-%let _facilityLocation		  = _NA_ ;
-%let _encType				        = _NA_ ;
-%let _facilityID			      = COALESCEC(COMPRESS(PUT(UNIHOSP,15.),'. '),COMPRESS(HOSP_ID,'. ')) ;
+%let _patID 				= PUT(ENROLID,20.) ;
+%let _encounterID			= PUT(CASEID,15.) ;
+%let _admitDate				= COALESCE(ADMDATE,SVCDATE) ;
+%let _admitTime				= _NA_;
+%let _dischargeDate			= COALESCE(DISDATE,TSVCDAT) ;
+%let _dischargeTime			= _NA_;
+%let _facilityLocation		= _NA_ ;
+%let _encType				= _NA_ ;
+%let _facilityID			= COALESCEC(COMPRESS(PUT(UNIHOSP,15.),'. '),COMPRESS(HOSP_ID,'. ')) ;
 %let _dischargeDisposition	= COALESCEC(COMPRESS(DSTATUS,'. '),COMPRESS(PUT(DRG,z3.),'. ')) ; /*<--DSTATUS has 2 digits;DRG has 1-3 digits;so change all DRG to 3 digits to avoid misuse of codings */
-%let _dischargeStatus		    = DSTATUS ;
-%let _drg					          = PUT(DRG,BEST12.) ;
-%let _drgType				        = _NA_ ;
-%let _admittingSource		    = _NA_ ; 
-%let _admitType				      = ADMTYP ;						/*<-UABCERTs needed*/
-%let _providerID			      = COALESCEC(COMPRESS(NPI,'. '),COMPRESS(PUT(PROVID,BEST12.),'. '),COMPRESS(PUT(PHYSID,BEST12.),'. '),COMPRESS(PHYS_ID,'. ')) ;
+%let _dischargeStatus		= DSTATUS ;
+%let _drg					= PUT(DRG,BEST12.) ;
+%let _drgType				= _NA_ ;
+%let _admittingSource		= _NA_ ; 
+%let _admitType				= ADMTYP ;						/*<-UABCERTs needed*/
+%let _providerID			= COALESCEC(COMPRESS(NPI,'. '),COMPRESS(PUT(PROVID,BEST12.),'. '),COMPRESS(PUT(PHYSID,BEST12.),'. '),COMPRESS(PHYS_ID,'. ')) ;
 
-%let _diagnosisID			      = PUT(SEQNUM,15.) ;
-%let _dx					          = _NA_ ;
-%let _dxType				        = DXVER ;
-%let _dxSource				      = _NA_ ;
-%let _dxOrigin				      = "CL" ;
-%let _pdx					          = PDX ;
-%let _dxPOA					        = POA: ; 						/*POAPDX, POADX1-POADX15, which are shown in M16.MDCRI161 data*/
+%let _diagnosisID			= PUT(SEQNUM,15.) ;
+%let _dx					= _NA_ ;
+%let _dxType				= DXVER ;
+%let _dxSource				= _NA_ ;
+%let _dxOrigin				= "CL" ;
+%let _pdx					= PDX ;
+%let _dxPOA					= POA: ; 						/*POAPDX, POADX1-POADX15, which are shown in M16.MDCRI161 data*/
 
-%let _providerIDType		    = _NA_ ;
-%let _providerType			    = PUT(STDPROV,BEST12.) ;
-%let _facilityType			    = PUT(STDPLAC,BEST12.) ;
-%let _source				        = ;
+%let _providerIDType		= _NA_ ;
+%let _providerType			= PUT(STDPROV,BEST12.) ;
+%let _facilityType			= PUT(STDPLAC,BEST12.) ;
+%let _source				= ;
 
-%let _beginDate				      = SVCDATE ;
-%let _endDate				        = TSVCDAT ;
+%let _beginDate				= SVCDATE ;
+%let _endDate				= TSVCDAT ;
 
 
 /* ================================= DX Vars Length Settings ========================= */
 
 %macro length_sets;					/* ============ variable length settings ============ */
 
-length 	_PATID 						        $20
-        _ENCOUNTERID 				      $20
-		    _ENC_TYPE					        $2	
+length 	_PATID 						$20
+        _ENCOUNTERID 				$20
+		_ENC_TYPE					$2	
 
-		    _ADMIT_DATE 				      4
-		    _ADMIT_TIME					      8
-		    _ADMIT_TYPE					      $2		/*<-UABCERTs needed*/
-		    _ADMITTING_SOURCE			    $2
+		_ADMIT_DATE 				4
+		_ADMIT_TIME					8
+		_ADMIT_TYPE					$2		/*<-UABCERTs needed*/
+		_ADMITTING_SOURCE			$2
 
-		    _DISCHARGE_DATE 			    4
-		    _DISCHARGE_TIME				    8
-		    _DISCHARGE_DISPOSITION		$2
-		    _DISCHARGE_STATUS			    $2
+		_DISCHARGE_DATE 			4
+		_DISCHARGE_TIME				8
+		_DISCHARGE_DISPOSITION		$2
+		_DISCHARGE_STATUS			$2
 
-		    _BEGIN_DATE					      4
-		    _END_DATE					        4
+		_BEGIN_DATE					4
+		_END_DATE					4
 
-		    _PROVIDERID 				      $10
-		    _PROVIDERID_TYPE			    $10		/*<-UABCERTs needed*/
-		    _PROVIDER_TYPE				    $5 		/*<-UABCERTs needed*/
+		_PROVIDERID 				$10
+		_PROVIDERID_TYPE			$10		/*<-UABCERTs needed*/
+		_PROVIDER_TYPE				$5 		/*<-UABCERTs needed*/
 
-		    _FACILITYID					      $20
-        _FACILITY_TYPE 				    $5 		/*<-UABCERTs needed*/
-		    _FACILITY_LOCATION			  $3
+		_FACILITYID					$20
+        _FACILITY_TYPE 				$5 		/*<-UABCERTs needed*/
+		_FACILITY_LOCATION			$3
 
-		    _DRG						          $3
-		    _DRG_TYPE					        $2
+		_DRG						$3
+		_DRG_TYPE					$2
 
 /*		---- diagnosis part ----	*/
 
-        _DIAGNOSISID				      $15 
-        _DX							          $18 
-        _DX_TYPE					        $2 
-        _DX_SOURCE					      $2 
-        _DX_ORIGIN					      $2 
-        _PDX						          $1 
-        _DX_POA						        $1 
+        _DIAGNOSISID				$15 
+        _DX							$18 
+        _DX_TYPE					$2 
+        _DX_SOURCE					$2 
+        _DX_ORIGIN					$2 
+        _PDX						$1 
+        _DX_POA						$1 
 
-        _SOURCE						        $5 		/*<-UABCERTs needed*/
-        AGE							          3
+        _SOURCE						$5 		/*<-UABCERTs needed*/
+        AGE							3
 ;
 %mend;
 
