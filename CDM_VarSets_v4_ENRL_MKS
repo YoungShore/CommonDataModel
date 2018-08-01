@@ -1,0 +1,40 @@
+/* Created by Shuo Yang from Univ. of Alabama at Birmingham */
+/* Last Updated on 8/1/2018                                 */
+/* Any Question Contact: shuoyang@uabmc.edu                 */
+
+
+/* =========================== Enrollment (ENRL) Variables Settings ====================== */
+
+%let _patID			= ENROLID ;
+%let _enrStartDate	= DTSTART ;
+%let _enrEndDate	= DTEND ;
+%let _chart			= ;
+%let _enrBasis		= ;
+%let _medical		= ;
+%let _pharmacy		= RX DRUGCOVG ; /*<--CCAE/MDCR IS 'RX'; MEDICAID IS 'DRUGCOVG'*/
+%let _partABMinusC	= ;
+%let _partD			= ;
+%let _source		= ;
+
+
+/* =========================== ENRL Length & Label Settings ============================== */
+
+%macro length_label ;
+
+	length 	PATID 				$20
+			ENR_START_DATE		4
+			ENR_END_DATE		4
+			MEDICAL				$1
+			PHARMACY			$1
+			CHART				$1
+			ENR_BASIS			$1
+	;
+	label 	PATID 				= "Unique Patient Identification Number"
+			ENR_START_DATE		= "Date of the Beginning of Continuous Enrollment Period"
+			ENR_END_DATE		= "Date of the End of the Continuous Enrollment Period"
+			MEDICAL				= "Availability of Medical Coverage"
+			PHARMACY			= "Availability of Pharmacy Coverage"
+			CHART				= "Are You Able to Request(or Review) Charts for This Person"
+			ENR_BASIS			= "The Basis on Which the Complete Capture is Asserted"
+	;
+%mend ;
