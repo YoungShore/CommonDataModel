@@ -1,0 +1,86 @@
+/* Created by Shuo Yang from Univ. of Alabama at Birmingham */
+/* Last Updated on 8/1/2018                                 */
+/* Any Question Contact: shuoyang@uabmc.edu                 */
+
+
+/* =========================== Dispensing (RX) Variables Settings ====================== */
+
+%let _PATID					= PUT(ENROLID,20.) ;
+%let _DISPENSINGID			= PUT(SEQNUM,15.) ;
+%let _DISPENSEDATE			= SVCDATE ;
+%let _NDC					= NDCNUM ;
+%let _DISPENSESUP			= DAYSUPP ;
+%let _DISPENSEAMT			= METQTY ;
+%let _DISPENSEDOSEDISP		= _NA_;
+%let _DISPENSEDOSEDISPUNIT	= _NA_;
+%let _DISPENSEROUTE			= MSTFMDS ;	/*<-from 'Redbook' file*/
+%let _rawGNN				= GENNME ;	/*<-from 'Redbook' file*/
+%let _STRENGTH				= STRNGTH ;	/*<-from 'Redbook' file*/
+%let _PRESCRIBERID			= _NA_ ;
+%let _PRESCRIBERIDTYPE		= _NA_ ;
+%let _PRESCRIBINGID			= _NA_ ;
+%let _PHARMACYID			= PUT(PHARMID,15.) ;
+%let _SOURCE				= ;
+
+
+/* =========================== RX Length & Label Settings ========================== */
+
+%macro lengh_label;
+
+length 	_PATID 				$20
+		_DISPENSINGID		$15
+       	_DISPENSE_DATE 		4
+/*		GNN					$50 */
+	   	_NDC 				$11
+	   	_DISPENSE_SUP 		8
+	   	_DISPENSE_AMT 		8
+		_DISPENSE_DOSE_DISP	8
+		_DISPENSE_DOSE_DISP_UNIT	$20
+/*		STRENGTH			$30 */
+	   	_PRESCRIBERID 		$20 
+	   	_PRESCRIBERID_TYPE $4 
+		_PRESCRIBINGID		$15
+		_PHARMACYID		$16
+		_SOURCE 			$5
+		AGE					3 
+;
+
+label 	_PATID						= "Unique Patient Identification Number"
+		_DISPENSINGID				= "Dispensing ID"
+      	_DISPENSE_DATE				= "Dispensing Date"
+/*		GNN							= "Generic Name" */
+	  	_NDC						= "National Drug Code"
+	  	_DISPENSE_SUP				= "Days Supply"
+	  	_DISPENSE_AMT				= "Number of Units (pills, tablets, vials) Dispensed" 
+		_DISPENSE_DOSE_DISP			= "Dose of a Given Med as Dispensed"
+		_DISPENSE_DOSE_DISP_UNIT	= "Units of the Dispensed Dose"
+/*		STRENGTH					= "Strength" */
+	  	_PRESCRIBERID 				= "Prescriber ID"
+	  	_PRESCRIBERID_TYPE			= "Prescriber ID Type"
+		_PRESCRIBINGID				= "Prescribing(Table) ID"
+		_PHARMACYID					= "Pharmacy ID"
+		_SOURCE						= "Data Source"
+;
+
+%mend;
+
+/* ================================ RX Rename Settings ============================== */
+
+%macro renams;
+
+rename	_PATID						= PATID
+		_DISPENSINGID				= DISPENSINGID
+		_DISPENSE_DATE 				= DISPENSE_DATE
+		_NDC 						= NDC
+		_DISPENSE_SUP 				= DISPENSE_SUP
+		_DISPENSE_AMT 				= DISPENSE_AMT
+		_DISPENSE_DOSE_DISP			= DISPENSE_DOSE_DISP
+		_DISPENSE_DOSE_DISP_UNIT	= DISPENSE_DOSE_DISP_UNIT
+		_DISPENSE_ROUTE				= DISPENSE_ROUTE
+		_STRENGTH					= STRENGTH
+	 	_PRESCRIBERID 				= PRESCRIBERID
+		_PRESCRIBERID_TYPE			= PRESCRIBERID_TYPE
+		_PRESCRIBINGID				= PRESCRIBINGID
+		_PHARMACYID					= PHARMACYID
+		_SOURCE 					= SOURCE ;
+%mend;
