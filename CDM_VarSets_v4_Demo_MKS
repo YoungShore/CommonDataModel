@@ -1,0 +1,46 @@
+/* Created by Shuo Yang from Univ. of Alabama at Birmingham */
+/* Last Updated on 8/1/2018                                 */
+/* Any Question Contact: shuoyang@uabmc.edu                 */
+
+
+/* =========================== Diagnosis (DX) Variables Settings ====================== */
+
+%let _patID					= PUT(ENROLID,20.) ;
+%let _birthDate				= _NA_ ;
+%let _birthTime				= _NA_ ;
+%let _sex					= SEX ;
+%let _sexualOrientation		= _NA_ ;
+%let _genderIdentity		= _NA_ ;
+%let _hispanic				= _NA_ ;
+%let _race					= STDRACE ; *<--this is for medicaid data, ccae & mdcr data don't have race ;
+%let _bioBankFlag			= _NA_ ;
+
+%let _demoDat				= DTSTART ;
+%let _age					= AGE ;
+%let _dobYr					= DOBYR ;
+%let _patPrefLanguageSpoken	= _NA_ ;
+
+
+/* =========================== Length & Label Settings ======================== */
+
+%macro length_label ;
+
+	length 	PATID 		$20
+			BIRTH_DATE 	4
+			BIRTH_TIME	8
+			SEX				$2 
+			SEXUAL_ORIENTATION	$2 
+			GENDER_IDENTITY		$2
+			HISPANIC 	$2
+			RACE		$2
+			;
+	label 	PATID		= "Unique Patient Identification Number"
+			Birth_Date	= "Patient Date of Birth"
+			SEX				= "Sex Assigned at Birth"
+			SEXUAL_ORIENTATION	= "Sexual Orientation"
+			GENDER_IDENTITY		= "Current Gender Identity"
+			HISPANIC	= "Hispanic Origin, Regardless of Race"
+			RACE		= "Patient Race"
+			;
+%mend;
+
