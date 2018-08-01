@@ -1,0 +1,248 @@
+/* =========================================================== *
+/* Programmed by Shuo Yang from Univ. of Alabama at Birmingham *
+/* Last Updated on 5/18/2018 by Shuo Yang ;						*/
+/*STD_Death_&_Cause_MKS16_180108 */
+
+/* ================================================================ */
+/*						Define SAS Libraries						*/
+
+%inc "M:\studies\MKS1\formats\libname.txt";
+%inc "M:\studies\MKS1\pgms\Shuo\libname_sy.txt";
+%inc "M:\studies\MKS1\pgms\Shuo\STD\STD_Formats_MKS_180112.sas";
+
+%let raw = ;
+%let vew = dt64 ;
+%let wrk = ysms1 ;
+%let std = s_mks;
+
+%let outpath = M:\studies\MKS1\pgms\Shuo\results ;
+%let verDate = %sysfunc(today(),yymmdd6.) ;
+%let outfolder = &verDate.-MKS STD DEATH ;
+
+
+%macro mkdir(outpath,outfolder);
+	* CREATE WORK DIRECTORY FOR OUTPUT IF IT DOES NOT EXIST;
+	%if %sysfunc(fileexist(&outpath.\&outfolder.)) ^= 1 %then %do;
+		options dlcreatedir;
+		libname output "&outpath.\&outfolder.";
+	%end;
+	%else %put &outpath.\&outfolder. already exists ;
+%mend mkdir;
+%mkdir(&outpath.,&outfolder.);
+
+/* ==================================================================================== */
+/*						Define PCORNET Variables & Necessary Others						*/
+
+%let _patID					= PUT(ENROLID,20.) ;
+%let _deathStatus			= COALESCEC(DSTATUS,put(DRG,z3.)) ;		*<-- since DRG can have 20,40,41,42 values too, which mess up with mks death_status, so use z3. format to add leading 0s to avoid it;
+%let _deathDate				= COALESCE(DISDATE,TSVCDAT) ;			*<-- diff source named differently, so defined it at macro step ;
+%let _deathDateImpute		= "N" ;
+%let _deathSource			= "L" ;
+%let _deathMatchConfidence	= "NI" ;
+
+* ---- death cause data ---- ;
+
+%let _deathCause			= PDX ;
+%let _deathCauseCode		= DXVER ;
+%let _deathCauseType		= "UN" ;
+%let _deathCauseSource		= "L" ;
+%let _deathCauseConfidence	= "NI" ;
+
+
+%macro DOD_pul(raw,dstin,dstout,_deathDate,kepVars);					/* ===================== DOD PULL =================== */
+proc sort data = &raw..&dstin. (keep = &kepVars.
+								where=( compress(&_patid.,'. ') not in ('') 
+									and &_deathDate. ^=.  
+									and (strip(dstatus) in ('20','40','41','42') or
+										 strip(put(drg,z3.)) in ('283','284','285')			/*<-- no better way to avoid mis-pull, have to use the original varnames here*/
+										)
+									   ) 
+								) nodupkey 
+		  out = &wrk..pul_dod_&dstout. (compress=binary) ;
+by &kepVars. ;
+run;
+
+data &VEW..nodup_dod_&dstout. / view=&VEW..nodup_DOD_&dstout. ;
+
+	length 	PATID 					$20
+			DEATH_DATE 				4
+			DEATH_DATE_IMPUTE		$2
+			DEATH_SOURCE			$2
+			DEATH_MATCH_CONFIDENCE	$2
+
+			DEATH_CAUSE				$8
+			DEATH_CAUSE_CODE		$2
+			DEATH_CAUSE_TYPE		$2
+			DEATH_CAUSE_SOURCE		$2
+			DEATH_CAUSE_CONFIDENCE	$2
+			;
+	label 	PATID					= "Unique Patient Identification Number"
+	      	DEATH_DATE				= "Date of Death"
+			DEATH_DATE_IMPUTE		= "Which Part of DEATH_DATE is Imputed"
+			DEATH_SOURCE			= "Death Source"
+			DEATH_MATCH_CONFIDENCE	= "Confidence of Probabilistic Matching Strategy if Applied"
+
+			DEATH_CAUSE				= "Cause of Death"
+			DEATH_CAUSE_CODE		= "Cause of Death Code Type (DRG for MKS)"
+			DEATH_CAUSE_TYPE		= "Cause of Death Type"
+			DEATH_CAUSE_SOURCE		= "Source of Cause of Death Info"
+			DEATH_CAUSE_CONFIDENCE	= "Confidence of Accurary of the Cause of Death"
+			;
+set &wrk..pul_dod_&dstout. ;
+
+	by &kepvars. ;
+
+	PATID 					= compress(&_PATID.,'. ') ;
+	DEATH_DATE 				= &_deathDate. ;
+	DEATH_DATE_IMPUTE 		= strip(&_deathDateImpute.)  ;
+	DEATH_SOURCE			= strip(&_deathSource.) ;
+	DEATH_MATCH_CONFIDENCE	= strip(&_deathMatchConfidence.) ;
+
+	DEATH_CAUSE				= compress(&_deathCause.,' ') ;
+
+		 if	strip(&_deathCauseCode.)='0'	then DEATH_CAUSE_CODE = '10' ;
+	else if strip(&_deathCauseCode.)='9'	then DEATH_CAUSE_CODE = '09' ;
+	else if 0<input(substr("&dstout.",6,2),best4.) < 15 	then DEATH_CAUSE_CODE = '09' ;
+	else DEATH_CAUSE_CODE = 'UN' ;
+
+	DEATH_CAUSE_TYPE 		= strip(&_deathCauseType.) ;
+
+	DEATH_CAUSE_SOURCE		= strip(&_deathCauseSource.) ;
+	DEATH_CAUSE_CONFIDENCE	= strip(&_deathCauseConfidence.) ;
+
+
+	format DEATH_DATE mmddyy10.;
+
+	keep patid death_: ;
+
+run;
+
+%mend;
+
+*proc printto log="&outpath.\&outfolder.\log_STD_DEATH_yearly_pul_&verDate..log"  print="&outpath.\&outfolder.\log_STD_DEATH_yearly_pul_&verDate..lst" new ; run;* direct log to a local file;
+
+			/* ------ 2016 ------ */
+%dod_pul(m16,mdcri161,MDCRI16,DISDATE,ENROLID DSTATUS DRG DISDATE  PDX DXVER);
+%dod_pul(m16,mdcrs161,MDCRS16,DISDATE,ENROLID DSTATUS DRG DISDATE TSVCDAT PDX DXVER);
+
+%dod_pul(m16,ccaei161,CCAEI16,DISDATE,ENROLID DSTATUS DRG DISDATE  PDX DXVER);
+%dod_pul(m16,ccaes161,CCAES16,DISDATE,ENROLID DSTATUS DRG DISDATE TSVCDAT PDX DXVER);
+
+%dod_pul(m16,medicaid_i_2016_v1,MDCDI16,DISDATE,ENROLID DSTATUS DRG DISDATE  PDX DXVER);
+%dod_pul(m16,medicaid_s_2016_v1,MDCDS16,DISDATE,ENROLID DSTATUS DRG DISDATE TSVCDAT PDX DXVER);
+
+			/* ------ 2015 ------ */
+%dod_pul(MSCN2015,mdcri151,MDCRI15,DISDATE,ENROLID DSTATUS DRG DISDATE  PDX DXVER);
+%dod_pul(MSCN2015,mdcrs151,MDCRS15,DISDATE,ENROLID DSTATUS DRG DISDATE TSVCDAT PDX DXVER);
+
+%dod_pul(MSCN2015,ccaei151,CCAEI15,DISDATE,ENROLID DSTATUS DRG DISDATE  PDX DXVER);
+%dod_pul(MSCN2015,ccaes151,CCAES15,DISDATE,ENROLID DSTATUS DRG DISDATE TSVCDAT PDX DXVER);
+
+%dod_pul(m16,medicaid_i_2015_v2,MDCDI15,DISDATE,ENROLID DSTATUS DRG DISDATE  PDX DXVER);
+%dod_pul(m16,medicaid_s_2015_v2,MDCDS15,DISDATE,ENROLID DSTATUS DRG DISDATE TSVCDAT PDX DXVER);
+
+			/* ------ 2014 ------ */
+%dod_pul(MSCN14,mdcri141,MDCRI14,DISDATE,ENROLID DSTATUS DRG DISDATE  PDX);
+%dod_pul(MSCN14,mdcrs141,MDCRS14,DISDATE,ENROLID DSTATUS DRG DISDATE TSVCDAT PDX);
+
+%dod_pul(MSCN14,ccaei141,CCAEI14,DISDATE,ENROLID DSTATUS DRG DISDATE  PDX);
+%dod_pul(MSCN14,ccaes141,CCAES14,DISDATE,ENROLID DSTATUS DRG DISDATE TSVCDAT PDX);
+
+%dod_pul(MCD11_15,medicaid_i_2014_v2,MDCDI14,DISDATE,ENROLID DSTATUS DRG DISDATE  PDX /*DXVER*/);
+%dod_pul(MCD11_15,medicaid_s_2014_v2,MDCDS14,DISDATE,ENROLID DSTATUS DRG DISDATE TSVCDAT PDX /*DXVER*/);
+
+/* --- 2013-2010 --- */
+
+/*-13-*/
+
+%dod_pul(MSCN15,mdcri132,MDCRI13,DISDATE,ENROLID DSTATUS DRG DISDATE  PDX);
+%dod_pul(MSCN15,mdcrs132,MDCRS13,DISDATE,ENROLID DSTATUS DRG DISDATE TSVCDAT PDX);
+
+%dod_pul(MSCN15,ccaei132,CCAEI13,DISDATE,ENROLID DSTATUS DRG DISDATE  PDX);
+%dod_pul(MSCN15,ccaes132,CCAES13,DISDATE,ENROLID DSTATUS DRG DISDATE TSVCDAT PDX);
+
+%dod_pul(MCD11_15,medicaid_i_2013_v4,MDCDI13,DISDATE,ENROLID DSTATUS DRG DISDATE  PDX /*DXVER*/);
+%dod_pul(MCD11_15,medicaid_s_2013_v4,MDCDS13,DISDATE,ENROLID DSTATUS DRG DISDATE TSVCDAT PDX /*DXVER*/);
+
+/*-12-*/
+
+%dod_pul(MSCN15,mdcri123,MDCRI12,DISDATE,ENROLID DSTATUS DRG DISDATE  PDX);
+%dod_pul(MSCN15,mdcrs123,MDCRS12,DISDATE,ENROLID DSTATUS DRG DISDATE TSVCDAT PDX);
+
+%dod_pul(MSCN15,ccaei123,CCAEI12,DISDATE,ENROLID DSTATUS DRG DISDATE  PDX);
+%dod_pul(MSCN15,ccaes123,CCAES12,DISDATE,ENROLID DSTATUS DRG DISDATE TSVCDAT PDX);
+
+%dod_pul(MCD11_15,medicaid_i_2012_v3,MDCDI12,DISDATE,ENROLID DSTATUS DRG DISDATE  PDX /*DXVER*/);
+%dod_pul(MCD11_15,medicaid_s_2012_v3,MDCDS12,DISDATE,ENROLID DSTATUS DRG DISDATE TSVCDAT PDX /*DXVER*/);
+
+/*-11-*/
+
+%dod_pul(MSCN15,mdcri113,MDCRI11,DISDATE,ENROLID DSTATUS DRG DISDATE  PDX);
+%dod_pul(MSCN15,mdcrs113,MDCRS11,DISDATE,ENROLID DSTATUS DRG DISDATE TSVCDAT PDX);
+
+%dod_pul(MSCN15,ccaei113,CCAEI11,DISDATE,ENROLID DSTATUS DRG DISDATE  PDX);
+%dod_pul(MSCN15,ccaes113,CCAES11,DISDATE,ENROLID DSTATUS DRG DISDATE TSVCDAT PDX);
+
+%dod_pul(MCD11_15,medicaid_i_2011_v2,MDCDI11,DISDATE,ENROLID DSTATUS DRG DISDATE  PDX /*DXVER*/);
+%dod_pul(MCD11_15,medicaid_s_2011_v2,MDCDS11,DISDATE,ENROLID DSTATUS DRG DISDATE TSVCDAT PDX /*DXVER*/);
+
+/*-10-*/
+
+%dod_pul(MSCN15,mdcri103,MDCRI10,DISDATE,ENROLID DSTATUS DRG DISDATE  PDX);
+%dod_pul(MSCN15,mdcrs103,MDCRS10,DISDATE,ENROLID DSTATUS DRG DISDATE TSVCDAT PDX);
+
+%dod_pul(MSCN15,ccaei103,CCAEI10,DISDATE,ENROLID DSTATUS DRG DISDATE  PDX);
+%dod_pul(MSCN15,ccaes103,CCAES10,DISDATE,ENROLID DSTATUS DRG DISDATE TSVCDAT PDX);
+
+/*---- 09-06---- */
+
+/*-09-*/
+%dod_pul(MSCN0609,mdcri093,MDCRI09,DISDATE,ENROLID DSTATUS DRG DISDATE  PDX);
+%dod_pul(MSCN0609,mdcrs093,MDCRS09,DISDATE,ENROLID DSTATUS DRG DISDATE TSVCDAT PDX);
+
+%dod_pul(MSCN0609,ccaei093,CCAEI09,DISDATE,ENROLID DSTATUS DRG DISDATE  PDX);
+%dod_pul(MSCN0609,ccaes093,CCAES09,DISDATE,ENROLID DSTATUS DRG DISDATE TSVCDAT PDX);
+
+/*-08-*/
+%dod_pul(MSCN0609,mdcri083,MDCRI08,DISDATE,ENROLID DSTATUS DRG DISDATE  PDX);
+%dod_pul(MSCN0609,mdcrs083,MDCRS08,DISDATE,ENROLID DSTATUS DRG DISDATE TSVCDAT PDX);
+
+%dod_pul(MSCN0609,ccaei083,CCAEI08,DISDATE,ENROLID DSTATUS DRG DISDATE  PDX);
+%dod_pul(MSCN0609,ccaes083,CCAES08,DISDATE,ENROLID DSTATUS DRG DISDATE TSVCDAT PDX);
+
+/*-07-*/
+%dod_pul(MSCN0609,mdcri073,MDCRI07,DISDATE,ENROLID DSTATUS DRG DISDATE  PDX);
+%dod_pul(MSCN0609,mdcrs073,MDCRS07,DISDATE,ENROLID DSTATUS DRG DISDATE TSVCDAT PDX);
+
+%dod_pul(MSCN0609,ccaei073,CCAEI07,DISDATE,ENROLID DSTATUS DRG DISDATE  PDX);
+%dod_pul(MSCN0609,ccaes073,CCAES07,DISDATE,ENROLID DSTATUS DRG DISDATE TSVCDAT PDX);
+
+/*-06-*/
+%dod_pul(MSCN0609,mdcri063,MDCRI06,DISDATE,ENROLID DSTATUS DRG DISDATE  PDX);
+%dod_pul(MSCN0609,mdcrs063,MDCRS06,DISDATE,ENROLID DSTATUS DRG DISDATE TSVCDAT PDX);
+
+%dod_pul(MSCN0609,ccaei063,CCAEI06,DISDATE,ENROLID DSTATUS DRG DISDATE  PDX);
+%dod_pul(MSCN0609,ccaes063,CCAES06,DISDATE,ENROLID DSTATUS DRG DISDATE TSVCDAT PDX);
+
+
+*proc printto ; run; quit;
+
+data &vew..DOD_all_years/view=&vew..dod_all_years ;
+set &vew..nodup_dod_: ;
+run;
+
+proc sql;														/* ================ GET CLEANED UNIQUE DEATH INFO TO STANDARDIZATION LIBRARY ================ */
+create table &std..death(compress=binary index=(PATID) alter='#####' 
+						 label="Death Info from MKS/Medicaid I,S Files;PW=#####" ) as
+select distinct PATID,
+				min(DEATH_DATE) as DEATH_DATE length=4 format=mmddyy10. label="Date of Death",
+				DEATH_DATE_IMPUTE, DEATH_SOURCE, DEATH_MATCH_CONFIDENCE,
+				count(distinct death_date) as N_DEATH length=3 label="Number of Unique Death Date"
+from &VEW..DOD_all_years
+group by patid ;
+
+create table &std..death_cause(compress=binary index=(PATID) alter='#####'
+						 label="Death Cause Info from MKS/Medicaid I,S Files;PW=#####" ) as
+select distinct PATID, DEATH_CAUSE, DEATH_CAUSE_CODE, DEATH_CAUSE_TYPE, DEATH_CAUSE_SOURCE, DEATH_CAUSE_CONFIDENCE
+from &vew..dod_all_years;
+quit;
