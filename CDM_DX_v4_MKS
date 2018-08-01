@@ -1,0 +1,499 @@
+/* =========================================================== *
+/* Programmed by Shuo Yang from Univ. of Alabama at Birmingham *
+/* Code Created on 5/18/2018 by Shuo Yang ; 
+   Last Updated on 5/18/2018 by Shuo Yang ;                    */
+   
+%inc "M:\studies\MKS1\formats\libname.txt";
+%inc "M:\studies\MKS1\pgms\Shuo\libname_sy.txt";
+%inc "M:\studies\MKS1\pgms\Shuo\STD\STD_Formats_MKS_180112.sas";
+
+%let raw = ;
+%let vew = dt64 ;
+%let wrk = ysms2 ;
+%let std = s_mks;
+
+%let outpath = M:\studies\MKS1\pgms\Shuo\results ;
+%let verDate = %sysfunc(today(),yymmdd6.) ;
+%let outfolder = &verDate.-MKS STD DX;
+
+%macro mkdir(outpath,outfolder);
+	* CREATE WORK DIRECTORY FOR OUTPUT IF IT DOES NOT EXIST;
+	%if %sysfunc(fileexist(&outpath.\&outfolder.)) ^= 1 %then %do;
+		options dlcreatedir;
+		libname output "&outpath.\&outfolder.";
+	%end;
+	%else %put &outpath.\&outfolder. already exists ;
+%mend mkdir;
+%mkdir(&outpath.,&outfolder.);
+
+
+/* ====== necessary variable list from PCORNet 4.0 ====== */
+
+%let _patID 				= PUT(ENROLID,20.) ;
+%let _encounterID			= PUT(CASEID,15.) ;
+%let _admitDate				= COALESCE(ADMDATE,SVCDATE) ;
+%let _admitTime				= _NA_;
+%let _dischargeDate			= COALESCE(DISDATE,TSVCDAT) ;
+%let _dischargeTime			= _NA_;
+%let _facilityLocation		= _NA_ ;
+%let _encType				= _NA_ ;
+%let _facilityID			= COALESCEC(COMPRESS(PUT(UNIHOSP,15.),'. '),COMPRESS(HOSP_ID,'. ')) ;
+%let _dischargeDisposition	= COALESCEC(COMPRESS(DSTATUS,'. '),COMPRESS(PUT(DRG,z3.),'. ')) ; /*<--DSTATUS has 2 digits;DRG has 1-3 digits;so change all DRG to 3 digits to avoid misuse of codings */
+%let _dischargeStatus		= DSTATUS ;
+%let _drg					= PUT(DRG,BEST12.) ;
+%let _drgType				= _NA_ ;
+%let _admittingSource		= _NA_ ; 
+%let _admitType				= ADMTYP ;						/*<-UABCERTs needed*/
+%let _providerID			= COALESCEC(COMPRESS(NPI,'. '),COMPRESS(PUT(PROVID,BEST12.),'. '),COMPRESS(PUT(PHYSID,BEST12.),'. '),COMPRESS(PHYS_ID,'. ')) ;
+
+%let _diagnosisID			= PUT(SEQNUM,15.) ;
+%let _dx					= _NA_ ;
+%let _dxType				= DXVER ;
+%let _dxSource				= _NA_ ;
+%let _dxOrigin				= "CL" ;
+%let _pdx					= PDX ;
+%let _dxPOA					= POA: ; 						/*POAPDX, POADX1-POADX15, which are shown in M16.MDCRI161 data*/
+
+%let _providerIDType		= _NA_ ;
+%let _providerType			= PUT(STDPROV,BEST12.) ;
+%let _facilityType			= PUT(STDPLAC,BEST12.) ;
+%let _source				= ;
+
+%let _beginDate				= SVCDATE ;
+%let _endDate				= TSVCDAT ;
+
+
+%macro length_sets;					/* ============ variable length settings ============ */
+
+length 	_PATID 						$20
+        _ENCOUNTERID 				$20
+		_ENC_TYPE					$2	
+
+		_ADMIT_DATE 				4
+		_ADMIT_TIME					8
+		_ADMIT_TYPE					$2		/*<-UABCERTs needed*/
+		_ADMITTING_SOURCE			$2
+
+		_DISCHARGE_DATE 			4
+		_DISCHARGE_TIME				8
+		_DISCHARGE_DISPOSITION		$2
+		_DISCHARGE_STATUS			$2
+
+		_BEGIN_DATE					4
+		_END_DATE					4
+
+		_PROVIDERID 				$10
+		_PROVIDERID_TYPE			$10		/*<-UABCERTs needed*/
+		_PROVIDER_TYPE				$5 		/*<-UABCERTs needed*/
+
+		_FACILITYID					$20
+        _FACILITY_TYPE 				$5 		/*<-UABCERTs needed*/
+		_FACILITY_LOCATION			$3
+
+		_DRG						$3
+		_DRG_TYPE					$2
+
+/*		---- diagnosis part ----	*/
+
+		_DIAGNOSISID				$15 
+		_DX							$18 
+		_DX_TYPE					$2 
+		_DX_SOURCE					$2 
+		_DX_ORIGIN					$2 
+		_PDX						$1 
+		_DX_POA						$1 
+
+		_SOURCE						$5 		/*<-UABCERTs needed*/
+		AGE							3
+;
+%mend;
+
+
+%macro label_sets ;					/* ============ variable label settings ============ */
+
+label 	_PATID						= "Unique Patient Identification Number"
+		_ENCOUNTERID				= "Encounter ID"
+		_ENC_TYPE					= "Encounter Type"		
+
+		_ADMIT_DATE					= "Admission Date"
+		_ADMIT_TIME					= "Admission Time"
+		_ADMIT_TYPE					= "Admit Type"
+		_ADMITTING_SOURCE			= "Admitting Source"
+
+		_DISCHARGE_DATE				= "Discharge Date"
+		_DISCHARGE_TIME				= "Discharge Time"
+		_DISCHARGE_DISPOSITION		= "Vital Status at Discharge"
+		_DISCHARGE_STATUS			= "Discharge Status"
+
+		_BEGEIN_DATE				= "Begin Date"
+		_END_DATE					= "End Date"
+
+		_PROVIDERID					= "Provider ID"
+		_PROVIDERID_TYPE			= "Provider ID Type"
+		_PROVIDER_TYPE				= "Provider Type"
+
+		_FACILITYID					= "Local Hospital/Clinical Facility ID"
+		_FACILITY_LOCATION			= "Facility 3 Digit Zip"
+		_FACILITY_TYPE				= "Place of Service"
+
+		_DRG						= "Diagnosis Related Group"
+		_DRG_TYPE					= "DRG Type"
+
+		_DIAGNOSISID				= "Unique Non-Persistent Record ID for Diagnosis" 
+		_DX							= "Diagnosis Code" 
+		_DX_TYPE					= "Diagnosis Type" 
+		_DX_SOURCE					= "Diagnosis Source" 
+		_DX_ORIGIN					= "Diagnosis Info Source" 
+		_PDX						= "Principal Discharge Diagnosis Flag"	
+		_DX_POA						= "Present on Admission" 
+		_SOURCE						= "Data Source from the Original File"
+;
+%mend;
+
+
+%macro rename_sets ;				/* ============ rename settings ============ */
+
+rename	_PATID 					= PATID	
+        _ENCOUNTERID 			= ENCOUNTERID 
+		_ENC_TYPE				= ENC_TYPE 
+
+		_ADMIT_DATE 			= ADMIT_DATE 
+		_ADMIT_TIME				= ADMIT_TIME 
+		_ADMIT_TYPE				= ADMIT_TYPE
+		_ADMITTING_SOURCE		= ADMITTING_SOURCE 
+
+		_DISCHARGE_DATE 		= DISCHARGE_DATE 
+		_DISCHARGE_TIME			= DISCHARGE_TIME 
+		_DISCHARGE_DISPOSITION	= DISCHARGE_DISPOSITION 
+		_DISCHARGE_STATUS		= DISCHARGE_STATUS 
+
+		_BEGIN_DATE				= BEGIN_DATE
+		_END_DATE				= END_DATE
+
+		_DRG					= DRG 
+		_DRG_TYPE				= DRG_TYPE 
+
+		_PROVIDERID 			= PROVIDERID 
+		_PROVIDERID_TYPE		= PROVIDERID_TYPE
+		_PROVIDER_TYPE			= PROVIDER_TYPE
+
+		_FACILITY_LOCATION		= FACILITY_LOCATION 
+		_FACILITYID				= FACILITYID 
+        _FACILITY_TYPE 			= FACILITY_TYPE
+
+/*		---- diagnosis part ----	*/
+
+		_DIAGNOSISID			= DIAGNOSISID 
+		_DX						= DX 
+		_DX_TYPE				= DX_TYPE 
+		_DX_SOURCE				= DX_SOURCE 
+		_DX_ORIGIN				= DX_ORIGIN 
+		_PDX					= PDX 
+		_DX_POA					= DX_POA 
+		_SOURCE					= SOURCE 	
+;
+%mend;
+
+
+%macro nodupul(raw,dstin,dstout,kepVars);/*,sortVars*/		/* ============ keep only needed variable & remove duplicates ============ */
+
+proc sort data = &raw..&dstin. (keep = &kepVars. 
+						  		where = (strip(&_patid.) not in ('','.') )
+						  		) nodupkey
+		  out = &wrk..nodupul_&dstout.(compress=binary) ;
+by &kepVars. ; * &sortVars. ;				/*<--needed to reduce pure redundant by seqnum*/
+run;
+
+%mend;
+
+*dstout format is '16_fccae';
+%macro prepare_dxs(dstin,dstout,renames,admDx,primDx,primPOA,dx1,dx1POA,dxs,poas);
+
+data &vew..PREP_DX_&DSTOUT. / view=&vew..PREP_DX_&DSTOUT. ;*(/*index=(_patid pid_enc_admdt=(_patid _encounterID _admit_date))*/ compress=binary) ;
+*data &wrk..PREP_DX_&DSTOUT. ;
+%length_sets;
+%label_sets;
+
+set &WRK..nodupul_DX_&DSTIN. &renames. ;
+
+	_PATID					= compress(&_PATID.,'. ') ;
+	_DIAGNOSISID			= compress(&_DIAGNOSISID.,'. ') ;
+	_SOURCE					= compress(scan("&dstout.",-1,'_'),'. ') ;
+
+	if compress(&_ENCOUNTERID.,'. ') ^= '' then _ENCOUNTERID = compress(&_ENCOUNTERID.,'. ') ;
+	else _ENCOUNTERID = compress(substr("&dstout.",1,4),'_')||substr("&dstout.",length("&dstout.")-1,2)||strip(_DIAGNOSISID) ;
+
+	_ADMIT_DATE				= &_ADMITDATE. ;
+	_ADMIT_TIME				= &_ADMITTIME. ;
+
+	_DISCHARGE_DATE			= &_DISCHARGEDATE. ;
+	_DISCHARGE_TIME			= &_DISCHARGETIME. ;
+
+	_BEGIN_DATE				= &_BEGINDATE. ;
+	_END_DATE				= &_ENDDATE. ;
+
+	_PROVIDERID 			= compress(&_PROVIDERID.,'. ') ;
+	_FACILITY_LOCATION		= compress(&_FACILITYLOCATION.,'. ') ;
+*	_ENC_TYPE				= strip(&_ENCTYPE.) ;
+	_FACILITYID				= compress(&_FACILITYID.,'. ') ;
+
+	/* ------ DISCHARGE_DISPOSITION ------ */
+
+	if strip(_dischargeDisposition) in ('20','40','41','42','283','284','285') then _DISCHARGE_DISPOSITION = "E" ;
+	/*^--DSTATUS has only 2 digits; DRG has been changed to 3 digits chars with leading 0s in top settings. */
+*	if strip(DSTATUS) in ('20','40','41','42') or DRG in (283,284,285) then _DISCHARGE_DISPOSITION = "E" ;	/*<-SPEC RULE FOR MKS DATA,CHANGE ACCORDINGLY*/
+	else _DISCHARGE_DISPOSITION = "A" ;
+
+	_DISCHARGE_STATUS		= compress(&_DISCHARGESTATUS.,'. ') ;
+
+	_DRG					= compress(&_DRG.,'. ') ;
+	_DRG_TYPE				= compress(&_DRGTYPE.,'. ') ;
+
+	_ADMITTING_SOURCE		= compress(&_ADMITTINGSOURCE.,'. ') ;
+	_ADMIT_TYPE				= compress(&_ADMITTYPE.,'. ') ;
+
+	/* ------ PROVIDERID_TYPE ------ */
+
+		 if compress(npi,'. ') ^= '' 	then _PROVIDERID_TYPE = 'NPI' ;
+	else if compress(provid,'. ') ^= ''	then _PROVIDERID_TYPE = 'PROVID' ;
+	else if compress(physid,'. ') ^= '' or compress(phys_id,'. ')^='' then _PROVIDERID_TYPE = 'PHYSID' ;		/*<-SPEC RULE FOR MKS DATA,CHANGE ACCORDINGLY*/
+
+	_PROVIDER_TYPE			= compress(&_PROVIDERTYPE.,'. ') ;
+	_FACILITY_TYPE			= compress(&_FACILITYTYPE.,'. ') ;
+
+	_DX_ORIGIN				= "CL" ;
+
+	if strip(&admdx.) ^= '' then do ;			/* VVV =========== ADMIT_DX RELATED SETTINGS ========== VVV */ 
+
+		_DX = strip(&admdx.) ; 
+		_PDX = "O" ; 
+		_DX_POA = "Y" ;
+		_DX_SOURCE = "AD" ;
+
+		/* ------ DX_TYPE ------ */
+
+			 if length(_dx) >= 7 then _DX_TYPE = '10' ;
+		else if length(_dx) <= 5 and anyalpha(_dx) = 0 then _DX_TYPE = '09' ;
+		else if length(_dx) <  7 and anyalpha(_dx) >= 1 and _admit_date >= mdy(10,01,2015) then _DX_TYPE = '10' ;
+		else _DX_TYPE = '09' ;
+
+		if _DX not in ('','.') then output ;
+	end;
+
+
+	if strip(&primdx.) ^= '' then do ;			/* VVV ========== PRIMARY_DX RELATED SETTINGS ========== VVV */
+
+		_DX = strip(&primdx.);
+		_PDX = "P" ;
+
+		/* ------ DX_POA ------ */
+
+		if compress(&primPOA.,'. ')= '' then _DX_POA = 'NI' ;	else _DX_POA = compress(&primPOA.,'. ') ;
+
+		/* ------ DX_SOURCE ------ */
+
+		_DX_SOURCE = "DI" ;
+
+		/* ------ DX_TYPE ------ */
+
+			 if &_dxtype. = '0'  then _DX_TYPE = '10' ;
+		else if &_dxtype. = '9'  then _DX_TYPE = '09' ;
+		else if length(_dx) >= 7 then _DX_TYPE = '10' ;
+		else if length(_dx) <= 5 and anyalpha(_dx) = 0 then _DX_TYPE = '09' ;
+		else if length(_dx) <  7 and anyalpha(_dx) >= 1 and _admit_date >= mdy(10,01,2015) then _DX_TYPE = '10' ;
+		else _DX_TYPE = '09' ;
+
+		if _DX not in ('','.') then output ;
+	end;
+
+	else if strip(&primdx.) = '' and strip(&dx1.) ^= '' then do ;
+
+		_DX	= strip(&dx1.) ;
+		_PDX= "P" ;
+
+		/* ------ DX_POA ------ */
+
+		if compress(&dx1POA.,'. ') = '' then _DX_POA = 'NI' ;	else _DX_POA = compress(&dx1POA.,'. ') ;
+
+		/* ------ DX_SOURCE ------ */
+
+		if 	upcase(substr(_source,1,1)) in ("I") OR 
+			upcase(substr(_source,1,1)) in ("F") AND CASEID ^= . OR 
+			upcase(substr(_source,1,1)) in ("S") AND strip(PROC1) = '' then _DX_SOURCE = 'DI' ;
+		else _DX_SOURCE = 'FI' ;
+
+		/* ------ DX_TYPE ------ */
+
+		if 	upcase(substr(_source,1,1)) in ("I") /*OR
+			upcase(substr(_source,1,1)) in ("F") AND CASEID ^= . OR 
+			upcase(substr(_source,1,1)) in ("S") AND strip(PROC1) = ''*/ then do ;
+				 if &_dxtype. = '0'  then _DX_TYPE = '10' ;
+			else if &_dxtype. = '9'  then _DX_TYPE = '09' ;
+			else if length(_dx) >= 7 then _DX_TYPE = '10' ;
+			else if length(_dx) <= 5 and anyalpha(_dx) = 0 then _DX_TYPE = '09' ;
+			else if length(_dx) <  7 and anyalpha(_dx) >= 1 and _admit_date >= mdy(10,01,2015) then _DX_TYPE = '10' ;
+			else _DX_TYPE = '09' ;
+		end;
+		else do;
+				 if length(_dx) >= 7 then _DX_TYPE = '10' ;
+			else if length(_dx) <= 5 and anyalpha(_dx) = 0 then _DX_TYPE = '09' ;
+			else if length(_dx) <  7 and anyalpha(_dx) >= 1 and _admit_date >= mdy(10,01,2015) then _DX_TYPE = '10' ;
+			else _DX_TYPE = '09' ;
+		end;
+
+		if _DX not in ('','.') then output;
+	end;
+
+
+	array dxs(*) &DXS. ;						/* VVV =============== DX1-DX15 SETTINGS ================= VVV */
+	array poas(*) &POAS. ;
+
+	do i=1 to dim(dxs) ;
+		_DX		= strip(dxs(i)) ;
+		_DX_POA	= compress(poas(i),'. '); 
+
+		/* ------ PDX ------ */
+		if 	upcase(substr(_source,1,1)) in ("I") OR
+			upcase(substr(_source,1,1)) in ("F") AND CASEID ^= . OR 
+			upcase(substr(_source,1,1)) in ("S") AND strip(PROC1) = '' then _PDX = 'S' ;
+		else _PDX = "O" ;
+
+		/* ------ DX_SOURCE ------ */
+		if 	i = 1 and (
+			upcase(substr(_source,1,1)) in ("I") OR
+			upcase(substr(_source,1,1)) in ("F") AND CASEID ^= . OR
+			upcase(substr(_source,1,1)) in ("S") AND strip(PROC1)
+						) then _DX_SOURCE = 'DI' ;
+		else _DX_SOURCE = 'FI' ;
+
+		/* ------ DX_TYPE ------ */
+		if 	i = 1 and (
+			upcase(substr(_source,1,1)) in ("I") OR
+			upcase(substr(_source,1,1)) in ("F") AND CASEID ^= . OR
+			upcase(substr(_source,1,1)) in ("S") AND strip(PROC1)
+						) then do;
+				 if &_dxtype. = '0' then _DX_TYPE = '10' ; 
+			else if &_dxtype. = '9' then _DX_TYPE = '09' ; 
+			else if length(_dx) >= 7 then _DX_TYPE = '10' ;
+			else if length(_dx) <= 5 and anyalpha(_dx) = 0 then _DX_TYPE = '09' ;
+			else if length(_dx) < 7 and anyalpha(_dx) >= 1 and _admit_date >= mdy(10,01,2015) then _DX_TYPE = '10' ;
+			else _DX_TYPE = '09' ;
+		end ;
+		else do ;
+			if length(_dx) >= 7 then _DX_TYPE = '10' ;
+			else if length(_dx) <= 5 and anyalpha(_dx) = 0 then _DX_TYPE = '09' ;
+			else if length(_dx) < 7 and anyalpha(_dx) >= 1 and _admit_date >= mdy(10,01,2015) then _DX_TYPE = '10' ;
+			else _DX_TYPE = '09' ;
+		end ; 
+
+		if _DX not in ('','.') then output;
+	end;
+
+	format 	_ADMIT_DATE _DISCHARGE_DATE mmddyy10. _ADMIT_TIME _DISCHARGE_TIME time8. ;
+
+	keep _PATID 		_ENCOUNTERID 		/*_ENC_TYPE*/
+		_ADMIT_DATE 	_ADMIT_TIME			_ADMITTING_SOURCE		_ADMIT_TYPE
+		_DISCHARGE_DATE	_DISCHARGE_TIME		_DISCHARGE_DISPOSITION	_DISCHARGE_STATUS 
+		_BEGIN_DATE		_END_DATE 
+		_DIAGNOSISID	
+		_PROVIDERID	 	_PROVIDERID_TYPE	_PROVIDER_TYPE 
+		_FACILITYID 	_FACILITY_LOCATION	_FACILITY_TYPE 
+		_DRG			_DRG_TYPE	
+		_DX				_DX_TYPE			_PDX				_DX_POA	
+		_DX_SOURCE		_DX_ORIGIN
+		_SOURCE 		AGE
+	;
+run;
+proc sort data=&vew..PREP_DX_&DSTOUT. nodup force
+		  out =&wrk..PREP_DX_&DSTOUT. (index=(_patid pid_enc_admdt=(_patid _encounterID _admit_date)) compress=binary);
+by 		_PATID 		_ENCOUNTERID 		/*_ENC_TYPE*/
+		_ADMIT_DATE 	_ADMIT_TIME			_ADMITTING_SOURCE		_ADMIT_TYPE
+		_DISCHARGE_DATE	_DISCHARGE_TIME		_DISCHARGE_DISPOSITION	_DISCHARGE_STATUS 
+		_BEGIN_DATE		_END_DATE 
+		_DIAGNOSISID	
+		_PROVIDERID	 	_PROVIDERID_TYPE	_PROVIDER_TYPE 
+		_FACILITYID 	_FACILITY_LOCATION	_FACILITY_TYPE 
+		_DRG			_DRG_TYPE	
+		_DX				_DX_TYPE			_PDX				_DX_POA	
+		_DX_SOURCE		_DX_ORIGIN
+		_SOURCE 		AGE;
+run;
+%mend;
+
+%macro join_enc_to_dxs(dstin,dstout);
+
+data &wrk..dxs_enc_&dstout.(index=(_patid /*pid_enc_admdt=(_patid _encounterID _admit_date)*/) compress=binary drop=rc);
+if _n_=1 then do;
+  declare hash hclm(dataset:"&wrk..CL_px_nodup_&dstin.", ordered:'a', multidata:"Y");
+  hclm.definekey('_patid', '_encounterID', '_admit_date');
+  hclm.definedata('_patid', '_encounterID', '_admit_date', '_enc_TYPE');
+  hclm.definedone();
+end;
+if 0 then set &wrk..CL_px_nodup_&dstin.(keep=_patid _encounterID _admit_date _enc_TYPE) ;
+set &WRK..prep_dx_&dstin. ;
+rc=hclm.find();
+
+if substr(_source,1,1)='I' then do;
+	_ENC_TYPE='IP';
+	output;
+end;
+else if rc ^= 0 then do;
+    _enc_type="OT";
+	output;
+end; 
+else do while(rc=0);
+	output;
+	rc=hclm.find_next( );
+end;
+run;
+
+data &vew..dxs_enc_true_&dstout. / view=&vew..dxs_enc_true_&dstout. ;
+set &wrk..dxs_enc_&dstout. ;
+if anyalpha(_encounterID)=0 ;
+run;
+data &vew..dxs_enc_faul_&dstout. / view=&vew..dxs_enc_faul_&dstout. ;
+set &wrk..dxs_enc_&dstout. ;
+if anyalpha(_encounterID) ;
+run;
+
+proc sort data=&vew..dxs_enc_true_&dstout. nodupkey
+		  out =&wrk..dxs_enc_true_&dstout.(compress=binary) ;
+by 	_patid _encounterID /* _diagnosisID */
+	_admit_date _admit_time _enc_type _admit_type _admitting_source 
+	_discharge_date _discharge_time _discharge_disposition _discharge_status 
+	_BEGIN_DATE		_END_DATE 
+	_providerID _providerID_type _provider_type
+	_facilityID _facility_Type _facility_location 
+	_drg _drg_type 
+	_dx _dx_type _dx_source _dx_origin _pdx _dx_poa
+	_source age ;
+run;
+
+proc sort data=&vew..dxs_enc_faul_&dstout. nodupkey
+		  out =&wrk..dxs_enc_faul_&dstout.(compress=binary) ;
+by 	_patid /* _encounterID _diagnosisID */
+	_admit_date _admit_time _enc_type _admit_type _admitting_source 
+	_discharge_date _discharge_time _discharge_disposition _discharge_status 
+	_BEGIN_DATE		_END_DATE 
+	_providerID _providerID_type _provider_type
+	_facilityID _facility_Type _facility_location 
+	_drg _drg_type 
+	_dx _dx_type _dx_source _dx_origin _pdx _dx_poa
+	_source age ;
+run;
+%mend;
+
+
+
+%MACRO STD_DX_YEAR(YR);					/*<====== COMBINE DXS BY YEARS ====== */
+
+data &std..diagnosis20&YR.(index=(PATID) compress=binary alter='aDmSY18'
+							label="Standardized &YR. Diagnosis From MKS/Medicaid I/F/S/O Files;PW=_AD_MSY18") ;
+set &WRK..DXS_ENC_TRUE_&YR.:
+	&WRK..DXS_ENC_FAUL_&YR.:
+;
+
+%rename_sets;
+
+run;
+%mend;
