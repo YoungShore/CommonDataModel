@@ -1,0 +1,146 @@
+/* Created by Shuo Yang from Univ. of Alabama at Birmingham */
+/* Last Updated on 8/1/2018                                 */
+/* Any Question Contact: shuoyang@uabmc.edu                 */
+
+
+/* =========================== Lab Variables Settings ====================== */
+
+%let _PATID				= PUT(ENROLID,20.) ;
+%let _LABRESULTCMID		= PUT(SEQNUM,15.) ;
+%let _ENCOUNTERID		= _NA_ ;
+%let _SPECIMENSOURCE	= _NA_ ;
+%let _LABLOINC			= LOINCCD ;
+%let _PRIORITY			= _NA_ ;
+%let _RESULTLOC			= "NI" ;
+%let _LABPX				= PROC1 ;
+%let _LABPXTYPE			= PROCTYP ;
+%let _LABORDERDATE		= _NA_ ;
+%let _SPECIMENDATE		= _NA_ ;
+%let _SPECIMENTIME		= _NA_ ;
+%let _RESULTDATE		= SVCDATE ;
+%let _RESULTTIME		= _NA_ ;
+%let _RESULTQUAL		= RESLTCAT ;
+%let _RESULTSNOMED		= _NA_ ;
+%let _RESULTNUM			= RESULT;
+%let _RESULTMODIFIER	= _NA_ ;
+%let _RESULTUNIT		= RESUNIT ;
+%let _NORMRANGELOW		= REFLOW ;
+%let _NORMMODIFIERLOW	= _NA_ ;
+%let _NORMRANGEHIGH		= REFHIGH ;
+%let _NORMMODIFIERHIGH	= _NA_ ;
+%let _ABNIND			= ABNORMAL ;
+
+%let _FACILITYID		= _NA_ ;
+%let _FACILITYTYPE		= STDPLAC ;
+%let _PROVIDERID		= PUT(PROVID,BEST12.) ;
+%let _PROVIDERIDTYPE	= _NA_ ;
+%let _PROVIDERTYPE		= STDPROV ;
+%let _SOURCE			= _NA_ ;
+
+
+/* ========================== Length & Label Settings ======================= */
+
+%macro length_label ;
+	length 	_PATID 				$20
+			_LAB_RESULT_CM_ID	$15
+			_ENCOUNTERID		$20
+			_SPECIMEN_SOURCE	$10
+			_LAB_LOINC 			$10
+			_PRIORITY			$2
+			_RESULT_LOC			$2
+			_LAB_PX 			$11
+			_LAB_PX_TYPE 		$2
+			_LAB_ORDER_DATE		4
+			_SPECIMEN_DATE		4
+			_SPECIMEN_TIME		8
+			_RESULT_DATE 		4
+			_RESULT_TIME 		8
+			_RESULT_QUAL 		$10 
+			_RESULT_SNOMED		$20
+	       	_RESULT_NUM 		8 
+			_RESULT_MODIFIER	$2 
+			_RESULT_UNIT 		$30 
+          	_NORM_RANGE_LOW 	$10  
+			_NORM_MODIFIER_LOW	$2 
+          	_NORM_RANGE_HIGH 	$10 
+			_NORM_MODIFIER_HIGH	$2 
+			_ABN_IND 			$2 
+
+			_FACILITYID			$16
+        	_FACILITY_TYPE 		$3
+			_PROVIDERID 		$10
+			_PROVIDERID_TYPE	$4
+			_PROVIDER_TYPE 		$3
+			_SOURCE 			$5	
+	;
+	label	_PATID				= "Unique Patient Identification Number"
+			_LAB_RESULT_CM_ID	= "Unique ID for Lab Result Claim Record"
+			_ENCOUNTERID		= "Encounter ID"
+			_SPECIMEN_SOURCE	= "Specimen Source"
+			_LAB_LOINC			= "Lab LOINC Codes"
+			_PRIORITY			= "Immediacy of Test"
+			_RESULT_LOC			= "Location of Test Result"
+			_LAB_PX				= "Procedure Code Used to Identify the Originating Order for the Lab Test"
+			_LAB_PX_TYPE		= "Procedure Code Type"
+			_LAB_ORDER_DATE		= "Order Date" 
+			_SPECIMEN_DATE		= "Specimen Date"
+			_SPECIMEN_TIME		= "Specimen Time"
+			_RESULT_DATE		= "Result Date"
+			_RESULT_TIME		= "Result Time"
+			_RESULT_QUAL		= "Lab Result Category Code/Qualitative Result"
+			_RESULT_SNOMED		= "Qualitative Result Mapped to SNOMED CT"
+			_RESULT_NUM			= "Quantitative Result"
+			_RESULT_MODIFIER	= "Modifier for Result Values"
+			_RESULT_UNIT		= "Units for Quantitative Result"
+         	_NORM_RANGE_LOW		= "Lower Bound of the Normal Range Assigned by the Laboratory"
+			_NORM_MODIFIER_LOW	= "Modifier for NORM_RANGE_LOW Values"
+        	_NORM_RANGE_HIGH	= "Upper Bound of the Normal Range Assigned by the Laboratory"
+			_NORM_MODIFIER_HIGH	= "Modifier for NORM_RANGE_HIGH Values"
+			_ABN_IND			= "Abnormal Result Indicator"
+
+			_FACILITYID		= "Facility ID"
+			_FACILITY_TYPE		= "Place of Service"
+			_PROVIDERID			= "Provider ID"
+			_PROVIDERID_TYPE	= "Provider ID Type"
+        	_PROVIDER_TYPE		= "Provider Type"
+	      	_SOURCE				= "Source of Data"
+	;
+%mend;
+
+/* =============================== Lab Rename Settings ================================= */
+
+%macro renams ;
+
+rename 		_PATID 				= PATID
+			_LAB_RESULT_CM_ID	= LAB_RESULT_CM_ID
+			_ENCOUNTERID		= ENCOUNTERID
+			_SPECIMEN_SOURCE	= SPECIMEN_SOURCE
+			_LAB_LOINC 			= LAB_LOINC
+			_PRIORITY			= PRIORITY
+			_RESULT_LOC			= RESULT_LOC
+			_LAB_PX 			= LAB_PX
+			_LAB_PX_TYPE 		= LAB_PX_TYPE
+			_LAB_ORDER_DATE		= LAB_ORDER_DATE
+			_SPECIMEN_DATE		= SPECIMEN_DATE
+			_SPECIMEN_TIME		= SPECIMEN_TIME
+			_RESULT_DATE 		= RESULT_DATE
+			_RESULT_TIME 		= RESULT_TIME
+			_RESULT_QUAL 		= RESULT_QUAL
+			_RESULT_SNOMED		= RESULT_SNOMED
+	       	_RESULT_NUM 		= RESULT_NUM
+			_RESULT_MODIFIER	= RESULT_MODIFIER
+			_RESULT_UNIT 		= RESULT_UNIT
+          	_NORM_RANGE_LOW 	= NORM_RANGE_LOW
+			_NORM_MODIFIER_LOW	= NORM_MODIFIER_LOW
+          	_NORM_RANGE_HIGH 	= NORM_RANGE_HIGH
+			_NORM_MODIFIER_HIGH	= NORM_MODIFIER_HIGH
+			_ABN_IND 			= ABN_IND
+
+			_FACILITYID			= FACILITYID
+        	_FACILITY_TYPE 		= FACILITY_TYPE
+			_PROVIDERID 		= PROVIDERID
+			_PROVIDERID_TYPE	= PROVIDERID_TYPE
+			_PROVIDER_TYPE 		= PROVIDER_TYPE
+			_SOURCE 			= SOURCE
+;
+%mend;
