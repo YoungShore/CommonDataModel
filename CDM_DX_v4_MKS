@@ -487,8 +487,8 @@ run;
 
 %MACRO STD_DX_YEAR(YR);					/*<====== COMBINE DXS BY YEARS ====== */
 
-data &std..diagnosis20&YR.(index=(PATID) compress=binary alter='aDmSY18'
-							label="Standardized &YR. Diagnosis From MKS/Medicaid I/F/S/O Files;PW=_AD_MSY18") ;
+data &std..diagnosis20&YR.(index=(PATID) compress=binary alter='*****'
+							label="Standardized &YR. Diagnosis From MKS/Medicaid I/F/S/O Files;PW=*****") ;
 set &WRK..DXS_ENC_TRUE_&YR.:
 	&WRK..DXS_ENC_FAUL_&YR.:
 ;
