@@ -1,7 +1,7 @@
 /* =========================================================== *
 /* Programmed by Shuo Yang from Univ. of Alabama at Birmingham *
-/* Code Created on 5/18/2018 by Shuo Yang ; 
-   Last Updated on 5/18/2018 by Shuo Yang ;                    */
+/* Last Updated on 5/18/2018 by Shuo Yang ;                    
+   Note That: !!! DX standardization process should be run after PX standardization is DONE, due to ENC_TYPE comes from PX data */
    
 %inc "M:\studies\MKS1\formats\libname.txt";
 %inc "M:\studies\MKS1\pgms\Shuo\libname_sy.txt";
