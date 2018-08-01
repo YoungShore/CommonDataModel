@@ -1,0 +1,108 @@
+/* Created by Shuo Yang from Univ. of Alabama at Birmingham */
+/* Last Updated on 8/1/2018                                 */
+/* Any Question Contact: shuoyang@uabmc.edu                 */
+
+
+/* =========================== Procedures (PX) Variables Settings ====================== */
+
+%let _PATID				= PUT(ENROLID,20.) ;
+%let _PROCEDURESID		= PUT(SEQNUM,15.) ;
+%let _ENCOUNTERID		= PUT(CASEID,15.) ;
+%let _ENCTYPE			= _NA_ ;
+%let _ADMITDATE			= COALESCE(ADMDATE,SVCDATE) ;
+%let _PXDATE			= COALESCE(SVCDATE,ADMDATE) ; /*<--NOTE HERE, SHOULD USE SERVICE DATE FIRST FOR PXDATE */
+%let _PX				= _NA_ ;
+%let _PXTYPE			= PROCTYP ;
+%let _PXSOURCE			= "CL" ;
+%let _PPX				= PPROC ;
+%let _PROVIDERID		= COALESCEC(COMPRESS(NPI,'. '),COMPRESS(PUT(PROVID,BEST12.),'. '),COMPRESS(PUT(PHYSID,BEST12.),'. '),COMPRESS(PHYS_ID,'. ')) ;
+* ------ UABCERTs REQUESTED & CREATED ------ ;
+%let _PROVIDERIDType	= _NA_ ;
+%let _PROVIDERType		= PUT(STDPROV,BEST12.) ;
+%let _PXAMT				= QTY ;
+%let _PXPAID			= PAY ;
+%let _FACILITYID		= _NA_ ;
+%let _FACILITYTYPE		= PUT(STDPLAC,3.) ;
+%let _SOURCE			= _NA_ ;
+
+%let _BEGINDATE			= SVCDATE ;	
+%let _ENDDATE			= TSVCDAT ;	
+
+
+/* ============================= PX Length & Label Settings ============================= */
+
+%macro LENTH_LABEL_SETTING;
+
+length 	_PATID 			$20
+		_PROCEDURESID	$15
+       	_ENCOUNTERID 	$20
+		_ENC_TYPE		$2 
+		_ADMIT_DATE 	4
+		_BEGIN_DATE		4
+		_END_DATE		4
+		_PX_DATE 		4
+		_PX 			$11
+		_PX_TYPE		$2
+		_PX_SOURCE		$2
+		_PPX			$2
+		_PROVIDERID		$10
+
+		_PROVIDERID_TYPE	$10
+		_PROVIDER_TYPE	$5
+		_PX_AMT			4
+		_PX_PAID		8
+		_FACILITYID		$20
+		_FACILITY_TYPE	$5
+       	_SOURCE 		$5
+		AGE				3 
+  ;
+label 	_PATID  			= "Unique Patient Identification Number"
+		_PROCEDURESID		= "ID For Each Unique Record"
+      	_ENCOUNTERID		= "Encounter ID"
+		_ENC_TYPE			= "Encounter Type"
+		_ADMIT_DATE			= "Admission Date"
+		_BEGIN_DATE			= "Service Begin Date"
+		_END_DATE			= "Service End Date"
+		_PX_DATE			= "Procedure Date"
+      	_PX					= "Procedure Code"
+		_PX_TYPE			= "Procedure Code Type"
+		_PX_SOURCE			= "Source of Procedure Info"
+		_PPX				= "Principal Procedure Flag"
+		_PROVIDERID			= "Provider ID"
+
+		_PROVIDERID_TYPE	= "Provider ID Type"
+		_PROVIDER_TYPE		= "Provider Type"
+		_PX_AMT				= "Count of Procedure Performed"
+		_PX_PAID			= "Procedure Paid Amount"
+		_FACILITYID			= "Facility ID"
+		_FACILITY_TYPE		= "Place of Service"
+	  	_SOURCE				= "Data Source"
+  ;
+
+%mend;
+
+
+/* ============================ PX Rename Settings =========================== */
+
+%macro renams;
+rename	_PATID			= PATID
+		_PROCEDURESID	= PROCEDURESID
+		_ENCOUNTERID	= ENCOUNTERID
+		_ENC_TYPE		= ENC_TYPE
+		_ADMIT_DATE		= ADMIT_DATE
+		_PX_DATE		= PX_DATE
+		_PX				= PX
+		_PX_TYPE		= PX_TYPE
+		_PX_SOURCE		= PX_SOURCE
+		_PPX			= PPX
+		_PROVIDERID		= PROVIDERID
+
+		_PROVIDERID_TYPE= PROVIDERID_TYPE
+		_PROVIDER_TYPE	= PROVIDER_TYPE
+		_PX_AMT			= PX_AMT
+		_PX_PAID		= PX_PAID
+		_FACILITYID		= FACILITYID
+		_FACILITY_TYPE	= FACILITY_TYPE
+		_SOURCE			= SOURCE
+;
+%mend;
