@@ -1,0 +1,298 @@
+/* =========================================================== *
+/* Programmed by Shuo Yang from Univ. of Alabama at Birmingham *
+/* Last Updated on 5/18/2018 by Shuo Yang ;						*/
+
+/* ================================================================ */
+/*						Define SAS Libraries						*/
+
+%inc "M:\studies\MKS1\formats\libname.txt";
+%inc "M:\studies\MKS1\pgms\Shuo\libname_sy.txt";
+%inc "M:\studies\MKS1\pgms\Shuo\STD\STD_Formats_MKS_180112.sas";
+
+%let raw = ;
+%let vew = dt64 ;
+%let wrk = ysms2 ;
+%let std = s_mks;
+
+%let outpath = M:\studies\MKS1\pgms\Shuo\results ;
+%let verDate = %sysfunc(today(),yymmdd6.) ;
+%let outfolder = &verDate.-MKS STD PX ;
+
+
+%macro mkdir(outpath,outfolder);
+	* CREATE WORK DIRECTORY FOR OUTPUT IF IT DOES NOT EXIST;
+	%if %sysfunc(fileexist(&outpath.\&outfolder.)) ^= 1 %then %do;
+		options dlcreatedir;
+		libname output "&outpath.\&outfolder.";
+	%end;
+	%else %put &outpath.\&outfolder. already exists ;
+%mend mkdir;
+%mkdir(&outpath.,&outfolder.);
+
+
+%let _PATID				= PUT(ENROLID,20.) ;
+%let _PROCEDURESID		= PUT(SEQNUM,15.) ;
+%let _ENCOUNTERID		= PUT(CASEID,15.) ;
+%let _ENCTYPE			= _NA_ ;
+%let _ADMITDATE			= COALESCE(ADMDATE,SVCDATE) ;
+%let _PXDATE			= COALESCE(SVCDATE,ADMDATE) ; /*<--NOTE HERE, SHOULD USE SERVICE DATE FIRST FOR PXDATE */
+%let _PX				= _NA_ ;
+%let _PXTYPE			= PROCTYP ;
+%let _PXSOURCE			= "CL" ;
+%let _PPX				= PPROC ;
+%let _PROVIDERID		= COALESCEC(COMPRESS(NPI,'. '),COMPRESS(PUT(PROVID,BEST12.),'. '),COMPRESS(PUT(PHYSID,BEST12.),'. '),COMPRESS(PHYS_ID,'. ')) ;
+* ------ UABCERTs REQUESTED & CREATED ------ ;
+%let _PROVIDERIDType	= _NA_ ;
+%let _PROVIDERType		= PUT(STDPROV,BEST12.) ;
+%let _PXAMT				= QTY ;
+%let _PXPAID			= PAY ;
+%let _FACILITYID		= _NA_ ;
+%let _FACILITYTYPE		= PUT(STDPLAC,3.) ;
+%let _SOURCE			= _NA_ ;
+
+%let _BEGINDATE			= SVCDATE ;	
+%let _ENDDATE			= TSVCDAT ;	
+
+/* ============ QUOTE PARTS CODES FROM "STD_ENCOUNTER_DX_MKS16_180109", THEY HAD BEEN RUN FOR DX PREPARING, KEEP HERE FOR REFERENCE =============== */
+
+
+%macro nodupul(raw,dstin,dstout,kepVars);				/* ================= PULL NEEDED DATA FROM EACH FILE =================== */
+
+proc sort data = &raw..&dstin. (keep = &kepVars.
+						  		where = (strip(&_patid.) not in ('','.') )
+						  		) nodupkey
+		  out = &wrk..nodupul_&dstout.(compress=binary) ;
+by &kepVars. ;
+run;
+
+%mend;
+
+%macro LENTH_LABEL_SETTING;
+
+length 	_PATID 			$20
+		_PROCEDURESID	$15
+       	_ENCOUNTERID 	$20
+		_ENC_TYPE		$2 
+		_ADMIT_DATE 	4
+		_BEGIN_DATE		4
+		_END_DATE		4
+		_PX_DATE 		4
+		_PX 			$11
+		_PX_TYPE		$2
+		_PX_SOURCE		$2
+		_PPX			$2
+		_PROVIDERID		$10
+
+		_PROVIDERID_TYPE	$10
+		_PROVIDER_TYPE	$5
+		_PX_AMT			4
+		_PX_PAID		8
+		_FACILITYID		$20
+		_FACILITY_TYPE	$5
+       	_SOURCE 		$5
+		AGE				3 
+  ;
+label 	_PATID  			= "Unique Patient Identification Number"
+		_PROCEDURESID		= "ID For Each Unique Record"
+      	_ENCOUNTERID		= "Encounter ID"
+		_ENC_TYPE			= "Encounter Type"
+		_ADMIT_DATE			= "Admission Date"
+		_BEGIN_DATE			= "Service Begin Date"
+		_END_DATE			= "Service End Date"
+		_PX_DATE			= "Procedure Date"
+      	_PX					= "Procedure Code"
+		_PX_TYPE			= "Procedure Code Type"
+		_PX_SOURCE			= "Source of Procedure Info"
+		_PPX				= "Principal Procedure Flag"
+		_PROVIDERID			= "Provider ID"
+
+		_PROVIDERID_TYPE	= "Provider ID Type"
+		_PROVIDER_TYPE		= "Provider Type"
+		_PX_AMT				= "Count of Procedure Performed"
+		_PX_PAID			= "Procedure Paid Amount"
+		_FACILITYID			= "Facility ID"
+		_FACILITY_TYPE		= "Place of Service"
+	  	_SOURCE				= "Data Source"
+  ;
+
+%mend;
+
+%MACRO PREP_PX(DSTIN,DSTOUT,_PXS);
+
+data &VEW..CL_PX_&DSTOUT. / VIEW=&VEW..CL_PX_&DSTOUT. ;
+
+%LENTH_LABEL_SETTING;
+
+set &wrk..nodupul_PX_&dstin. ; 
+
+	_PATID			= compress(&_PATID.,'. ') ;
+	_PROCEDURESID	= compress(&_proceduresID.,'. ') ;
+
+	/* ================= ENCOUNTERID ================== */
+
+	if compress(&_ENCOUNTERID.,'. ')^='' then _ENCOUNTERID = compress(&_ENCOUNTERID.,'. ') ;
+	else _ENCOUNTERID = compress(substr("&dstout.",1,4),'_')||substr("&dstout.",length("&dstout.")-1,2)||strip(_PROCEDURESID) ;
+
+	_ADMIT_DATE		= &_ADMITDATE. ;
+	_PX_DATE		= &_PXDATE. ;
+
+	if 	upcase(substr(_source,1,1)) = 'I' or
+		upcase(substr(_source,1,1)) = 'S' and PROC1 = '' /*meaning it’s from inpatient*/ or
+		upcase(substr(_source,1,1)) = 'F' and CASEID ^= . /*meaning it’s from inpatient*/ then do;
+			_BEGIN_DATE = . ;
+			_END_DATE = . ;
+	end;
+	else do;
+			_BEGIN_DATE = &_BEGINDATE. ; /*service start date */
+			_END_DATE	= &_ENDDATE. ; /*service end date */
+	end;
+
+	_PX_SOURCE		= compress(&_PXSOURCE.,'. ') ;
+	_PROVIDERID		= compress(&_PROVIDERID.,'. ') ;
+
+		 if compress(npi,'. ')^='' 		then _PROVIDERID_TYPE = 'NPI' ;
+	else if compress(provid,'. ')^='' 	then _PROVIDERID_TYPE = 'PROVID' ;
+	else if compress(physid,'. ')^='' or compress(phys_id,'. ')^='' then _PROVIDERID_TYPE = 'PHYSID';		/*<-SPEC RULE FOR MKS DATA,CHANGE ACCORDINGLY*/
+
+	_PROVIDER_TYPE	= compress(&_PROVIDERTYPE.,'. ') ;
+	_PX_AMT			= &_PXAMT. ;
+	_PX_PAID		= &_PXPAID. ;
+	_FACILITYID		= compress(&_FACILITYID.,'. ') ;
+	_FACILITY_TYPE	= compress(&_FACILITYTYPE.,'. ') ;
+
+	_SOURCE			= compress(scan("&dstout.",-1,'_'),'. ') ;
+
+	/* =============== facility_type ============= */
+
+	if upcase(substr(_SOURCE,1,1)) in ("I") then _FACILITY_TYPE = "21" ;
+	else _FACILITY_TYPE = compress(&_FACILITYTYPE.,'. ') ;
+
+	array PXS(*) &_PXS. ;
+
+	do i=1 to dim(PXS) ;
+
+		_PX = compress(PXS(i),' .') ; 		/*<--use this compress function rather than strip is considering future data may have '.' in coding system */
+
+		/* ========= primary px definition ========= */
+
+		if i=1 and strip(&_ppx.)^='' then _PPX = 'P' ;
+		else if upcase(substr(_SOURCE,1,1)) in ("I")	or 
+				upcase(substr(_SOURCE,1,1)) in ("F") and CASEID ^= .	or 
+				upcase(subctr(_SOURCE,1,1)) in ("S") and strip(PROC1) = ''	then _PPX = 'S' ;
+		else _PPX = 'OT' ;/*^<--- changed here according to discuss with Fenglong, only when from bline file(data only has 1 px and it's not PPX(primPx), then PPX set to OT; else set to 'S'. */
+		
+		/* ========= enc_type definition ========= */
+
+		if upcase(substr(_SOURCE,1,1)) in ("I") 							then _ENC_TYPE = "IP" ; 		/* <--DEFINE ENC_TYPE */
+		/*<--vv-BELOW RULES ARE SPECIFIC TO MARKETSCAN DATA, CAN BE DROPED AND JUMP TO ENC_TYPE=PUT(PXS(I),$CPT99FMT.) PART WHEN IN OTHER DATA */
+		else if upcase(substr(_SOURCE,1,1)) in ("F") and CASEID ^= . 		then _ENC_TYPE = "IP" ; 
+		else if upcase(substr(_SOURCE,1,1)) in ("S") and strip(PROC1) = '' 	then _ENC_TYPE = "IP" ;
+		else if put(pxs(i),$cpt99fmt.) not in ('','.','OT') 				then _ENC_TYPE = put(pxs(i),$cpt99fmt.) ; 
+		else _ENC_TYPE = 'OT' ;
+
+		/* ========= px_type definition --- quite specific for MKS data ========= */
+
+		if upcase(substr(_source,1,1)) in ('S','O') /*then do;*/ and _PX = strip(PROC1) and _PX ^= '' then do ;
+		/* ^---changed here since found PXTYPE IS ONLY FOR PROC1, NOT FOR PPROC */
+
+			if strip(&_PXTYPE.) in ('0')			then _PX_TYPE = '10' ;
+			else if strip(&_PXTYPE.) in ('1','7') 	then _PX_TYPE = 'CH' ;
+			else if strip(&_PXTYPE.) in ('*')		then _PX_TYPE = '09' ;
+
+			/* vvv--- added these rules below since other files imputed as below, so it make no sense to not impute here */
+			else if length(compress(_px,' .')) >= 7	then _PX_TYPE = '10' ;
+			else if length(compress(_px,' .')) < 5 	then _PX_TYPE = '09' ;
+			else if length(compress(_px,' .')) >= 5 and anyalpha(compress(_px,' .')) >= 0 then _PX_TYPE = 'CH' ;
+			/* ^^^--- added above ---^^^ */
+
+			else if strip(&_PXTYPE.) in ('')		then _PX_TYPE = 'NI' ;
+			else _PX_TYPE = 'UN' ;
+		end;
+		else do;
+			if length(compress(_px,' .')) >= 7		then _PX_TYPE = '10' ;
+			else if length(compress(_px,' .')) < 5 	then _PX_TYPE = '09' ;
+			else if length(compress(_px,' .')) >= 5 and anyalpha(compress(_px,' .')) >= 0 then _PX_TYPE = 'CH' ;
+			else if strip(&_PXTYPE.) in ('')		then _PX_TYPE = 'NI' ;
+			else _PX_TYPE = 'UN' ;
+
+		end;
+
+		if _PX ne '' then output;
+
+	end;
+
+format _ADMIT_DATE _BEGIN_DATE _END_DATE _PX_DATE mmddyy10. 
+		_PX_AMT _PX_PAID 	BEST12. ;
+
+keep 	_PATID		_PROCEDURESID		_ENCOUNTERID	_ENC_TYPE 
+		_ADMIT_DATE	_BEGIN_DATE 		_END_DATE		_PX_DATE
+		_PX			_PX_TYPE			_PX_SOURCE		_PPX
+		_PROVIDERID	_PROVIDERID_TYPE 	_PROVIDER_TYPE
+
+		_PX_AMT		_PX_PAID		
+		_FACILITYID	_FACILITY_TYPE	_SOURCE AGE
+;
+
+run;
+
+/*
+proc sort data=&VEW..CL_PX_&DSTOUT. nodup
+		  out =&WRK..CL_PX_&DSTOUT.(index=(_patid /*pid_enc_admdt=(_patid _encounterID _admit_date)* /) compress=binary) ;
+by		_PATID		_PROCEDURESID		_ENCOUNTERID	_ENC_TYPE 
+		_ADMIT_DATE	_PX_DATE
+		_PX			_PX_TYPE			_PX_SOURCE		_PPX
+		_PROVIDERID	_PROVIDERID_TYPE 	_PROVIDER_TYPE
+
+		_PX_AMT		_PX_PAID		
+		_FACILITYID	_FACILITY_TYPE		_SOURCE AGE ;
+run;
+*/
+%MEND;
+
+%macro NODUP_PX_ENC(dstin,dstout);
+proc sort data=&vew..cl_px_&dstin.(keep=_patID _encounterID _admit_Date _px_date _enc_Type
+							  		where=(_enc_type not in ('OT','.','') ) )		nodupkey
+		  out =&wrk..cl_px_nodup_&dstin.(index=(_patid pid_enc_admdt=(_patid _encounterID _admit_date)) compress=binary) ;
+by _patID _encounterID _admit_Date _px_date _enc_Type ;
+run;
+%mend;
+
+
+%MACRO STD_PX_YEAR(YR);
+data &VEW..PX_&yr. / VIEW=&VEW..PX_&YR. ;
+
+set &vew..CL_PX_&YR._: ;
+
+if _enc_type in ('OT','.','') then _enc_type = 'OT' ;
+
+rename	_PATID			= PATID
+		_PROCEDURESID	= PROCEDURESID
+		_ENCOUNTERID	= ENCOUNTERID
+		_ENC_TYPE		= ENC_TYPE
+		_ADMIT_DATE		= ADMIT_DATE
+		_PX_DATE		= PX_DATE
+		_PX				= PX
+		_PX_TYPE		= PX_TYPE
+		_PX_SOURCE		= PX_SOURCE
+		_PPX			= PPX
+		_PROVIDERID		= PROVIDERID
+
+		_PROVIDERID_TYPE= PROVIDERID_TYPE
+		_PROVIDER_TYPE	= PROVIDER_TYPE
+		_PX_AMT			= PX_AMT
+		_PX_PAID		= PX_PAID
+		_FACILITYID		= FACILITYID
+		_FACILITY_TYPE	= FACILITY_TYPE
+		_SOURCE			= SOURCE
+;
+
+run;
+
+proc sort data= &VEW..PX_&YR. nodup
+		  out = &STD..Procedures20&yr.(index=(PATID PX_DATE) compress=binary alter="*****"
+									 label="Procedures from MKS &yr. I/F/S/O Files;PW=*****" );
+by 	PATID PX_DATE PX_TYPE PX ;
+run;
+
+%MEND;
+
