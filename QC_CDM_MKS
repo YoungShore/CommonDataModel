@@ -1,0 +1,1397 @@
+
+/* =========================================================== *
+/* Programmed by Shuo Yang from Univ. of Alabama at Birmingham *
+/* Last Updated on 7/29/2018 by Shuo Yang ;						*/
+/* QC Standardized MKS Data */
+
+/* ======================================================================== */
+/*								Common Settings								*/
+/* ======================================================================== */
+
+%inc "M:\studies\MarketScan1\formats\libname.txt" ;
+%inc "M:\studies\MarketScan1\formats\libname_tst.txt" ;
+%inc "W:\onenote\references\Standardization\SAS Codes\MarketScan\MKS-UAB\STD_Formats_MKS_180112.sas" ;
+
+libname ndcs "W:\onenote\references\Drug NDCs\SAS Data\List from 2018 FDB" ;
+
+%let std 	= s_mks ;
+%let vew	= dt64 ;
+%let wrk	= ysms3 ;
+%let kep	= ysms1 ;
+
+*%let tstd	= t_mks ;
+
+%let datsrc	= MKS ;
+%let verDate= %sysfunc(date(),yymmdd6.) ;
+
+%let outpath = W:\Users\syang\Standardization\QC Items ;
+%let factsFolder = QC &datsrc. STD FACTS - &verDate. ;
+
+%macro mkdir(outpath,outfolder);
+	* CREATE WORK DIRECTORY FOR OUTPUT IF IT DOES NOT EXIST;
+	%if %sysfunc(fileexist(&outpath.\&factsFolder.)) ^= 1 %then %do;
+		options dlcreatedir;
+		libname output "&outpath.\&factsFolder.";
+	%end;
+	%else %put &outpath.\&factsFolder. already exists ;
+%mend mkdir;
+%mkdir(&outpath.,&factsFolder.);
+
+
+proc format;
+	value mis_n
+		.	= 'Miss'
+	other	= 'NonMiss'
+	;
+
+	value $mis_c
+		' ','.'	= 'Miss'
+		other	= 'NonMiss'
+	;
+run;
+
+/* ======================================================================== */
+/*							QC STD DEMOGRAPHIC DATA							*/
+/* ======================================================================== */proc contents data=_null_;run;
+
+%macro demo_contents(stdlib,dstin,datyp,ver);
+proc contents data = &stdlib..&dstin. details noprint
+			  out  = &wrk..&datsrc.&ver._&datyp.content(keep=libname memname name varnum type format label nobs) ; run;
+proc contents data = &stdlib..&dstin. details noprint
+			  out2 = &wrk..&datsrc.&ver._&datyp.content2(keep=libname member name type numvals) ; run;
+
+proc sql;
+create table &datsrc.&ver._&datyp.uniid_all as
+select distinct a.numVals 	as Unique_PATIDs,
+				b.nobs		as Observations
+from &wrk..&datsrc.&ver._&datyp.content2 as a
+left join &wrk..&datsrc.&ver._&datyp.content as b
+on a.name = b.name
+where a.name='PATID';
+quit;
+%mend;
+*%demo_contents(s_mks,demographic0616,demo0616,v4);
+
+%macro demo_freqs(stdlib,dstin,datyp,ver);
+proc freq data = &stdlib..&dstin. order=freq noprint;
+table patid 					/ missing out = &wrk..&datsrc.&ver._&datyp.freq_pid ;
+table birth_date 				/ missing out = &wrk..&datsrc.&ver._&datyp.freq_dob ;
+table n_birth					/ missing out = &wrk..&datsrc.&ver._&datyp.freq_nbirth ; 
+table sex						/ missing out = &wrk..&datsrc.&ver._&datyp.freq_sex ;
+table gender_identity			/ missing out = &wrk..&datsrc.&ver._&datyp.freq_sex_i ;
+table sexual_orientation		/ missing out = &wrk..&datsrc.&ver._&datyp.freq_sex_o ;
+table race						/ missing out = &wrk..&datsrc.&ver._&datyp.freq_race ;
+table hispanic					/ missing out = &wrk..&datsrc.&ver._&datyp.freq_hisp ;
+table biobank_flag				/ missing out = &wrk..&datsrc.&ver._&datyp.freq_bioflag ;
+table pat_pref_language_spoken 	/ missing out = &wrk..&datsrc.&ver._&datyp.freq_language ;
+format patid $mis_c. birth_date mis_n. ;
+run;
+%mend;
+*%demo_freqs(s_mks,demographic0616,demo0616,v4);
+
+
+%macro cl_freqs(datyp,ver,var,varName,fmt);
+data &wrk..&datsrc.&ver._&datyp.freq_&var. ;
+length varName $25 Contents $25 Description $100 ;
+set &wrk..&datsrc.&ver._&datyp.freq_&var.(rename=(&varName.=Contents)) ;
+varName = upcase("&varName.") ;
+Description = upcase(strip(put(contents,&fmt.))) ;
+*drop &varName. ;
+run ;
+%mend;
+
+
+%macro demo_means(dstin,datyp,ver,numVar);
+
+proc means data=&std..&dstin. maxdec=2 noprint ;
+var &numVar. ;
+output out=&wrk..&datsrc.&ver._&datyp.mean_&numVar.
+			n=N nmiss=NMISS mean=MEAN std=STD min=MIN P1=P1 P5=P5 P10=P10 Q1=Q1 MEDIAN=MEDIAN Q3=Q3 P90=P90 P95=P95 P99=P99 max=MAX ;
+run;
+
+data &wrk..&datsrc.&ver._&datyp.mean_&numVar.(drop=_: ) ;
+length VARNAME $25 ;
+set &wrk..&datsrc.&ver._&datyp.mean_&numVar. ;
+varName = "&numVar." ;
+run;
+
+%mend;
+
+
+%macro combo_demo_freq_means(ver,datyp);
+
+data &datsrc.&ver._&datyp.freqs_all ;
+set &wrk..&datsrc.&ver._&datyp.freq_: ;
+run;
+
+data &datsrc.&ver._&datyp.means_numall;
+set &wrk..&datsrc.&ver._&datyp.mean_n_birth(rename=(n=N_ nmiss=NMISS_ mean=MEAN_ std=STD_ min=MIN_ p1=P1_ p5=P5_ p10=P10_ q1=Q1_ median=MEDIAN_ q3=Q3_ p90=P90_ p95=P95_ p99=P99_ max=MAX_)) ;
+run;
+
+data &datsrc.&ver._&datyp.means_datall;
+set &wrk..&datsrc.&ver._&datyp.mean_birth_date(rename=(n=N_ nmiss=NMISS_ mean=MEAN_ std=STD_ min=MIN_ p1=P1_ p5=P5_ p10=P10_ q1=Q1_ median=MEDIAN_ q3=Q3_ p90=P90_ p95=P95_ p99=P99_ max=MAX_)) ;
+run;
+
+%mend;
+*%combo_demo_freq_means(v4,demo0616);
+
+%macro report_demo(ver,datyp,year_strt,year_end) ;
+
+proc report data = &datsrc.&ver._&datyp.uniid_all ;
+columns unique_patids observations ;
+define unique_patids 			/ display 	'Unique PATIDs' 		width=15 	format=comma15. ;
+define observations 			/ display 	'Observations'	width=20 	format=comma15. ;
+title "====== QC Standardized &DATSRC. Demographics0616 Data (&year_strt. - &year_end.) ======" ;
+title2 "&datyp. PATIDs/Observations Total/New Counts" ;
+run;
+
+proc report data = &datsrc.&ver._&datyp.freqs_all ;
+columns varname contents count percent ;
+define varname 	/ group 	'Variable Name'		width=32 ;
+define contents	/ display 	'Variable Values'	width=25 ;
+define description	/ display 	'Description'	width=100 ;
+define count	/ display 	'Frequency'			width=20	format=comma15. ;
+define percent	/ display 	'Percent'			width=10	format=6.2 ;
+title2 "&datyp. Character Variables Frequencies" ;
+run;
+
+proc report data = &datsrc.&ver._&datyp.means_numall ;
+columns varname n_ nmiss_ mean_ std_ min_ p1_ p5_ p10_ q1_ median_ q3_ p90_ p95_ p99_ max_ ;
+define varname	/ group		'Variable Name' 		width=32 ;
+define n_		/ display	'Observations'			width=20	format=comma15. ;
+define nmiss_	/ display	'Missing Observations'	width=20	format=comma15. ;
+define mean_	/ display	'Observation Mean'		width=10 ;
+define std_		/ display	'Standard Deviation'	width=10 ;
+define min_		/ display 	'Minimum Value'			width=10 ;
+define p1_		/ display	'1st Percent'			width=10 ;
+define p5_		/ display 	'5th Percent'			width=10 ;
+define p10_		/ display 	'10th Percent'			width=10 ;
+define q1_		/ display	'25th Percent'			width=10 ;
+define median_	/ display 	'Observation Median'	width=10 ;
+define q3_		/ display	'75th Percent'			width=10 ;
+define p90_		/ display 	'90th Percent'			width=10 ;
+define p95_		/ display	'95th Percent'			width=10 ;
+define p99_		/ display	'99th Percent'			width=10 ;
+define max_		/ display	'Maximum Value'			width=10 ;
+title2 "&datyp. Numeric Variables Distribution" ;
+run;
+
+proc report data = &datsrc.&ver._&datyp.means_datall ;
+columns varname n_ nmiss_ mean_ std_ min_ p1_ p5_ p10_ q1_ median_ q3_ p90_ p95_ p99_ max_ ;
+define varname	/ group		'Variable Name' 		width=32 ;
+define n_		/ display	'Observations'			width=20	format=comma15. ;
+define nmiss_	/ display	'Missing Observations'	width=20	format=comma15. ;
+*define mean	/ display	'Observation Mean'		width=10 ;
+*define std		/ display	'Standard Deviation'	width=10 ;
+define min_		/ display 	'Minimum Value'			width=10 ;
+define p1_		/ display	'1st Percent'			width=10 ;
+define p5_		/ display 	'5th Percent'			width=10 ;
+define p10_		/ display 	'10th Percent'			width=10 ;
+define q1_		/ display	'25th Percent'			width=10 ;
+define median_	/ display 	'Observation Median'	width=10 ;
+define q3_		/ display	'75th Percent'			width=10 ;
+define p90_		/ display 	'90th Percent'			width=10 ;
+define p95_		/ display	'95th Percent'			width=10 ;
+define p99_		/ display	'99th Percent'			width=10 ;
+define max_		/ display	'Maximum Value'			width=10 ;
+title2 "&datyp. Dates Variables Distribution" ;
+run;
+%mend;
+
+
+%macro final_report_demo(VER,DATYP,YEAR_STRT,YEAR_END);
+
+options orientation=landscape ;
+ods rtf file="&outpath.\&factsfolder.\QC_STD_&VER._&DATSRC._&DATYP. YEAR &YEAR_STRT.-&YEAR_END..rtf"
+		bodytitle startpage=no keepn notoc_data ;
+
+%report_demo(&VER.,&DATYP.,&YEAR_STRT.,&YEAR_END.);
+
+ods rtf close;
+
+%mend;
+*%final_report_demo(V4,DEMO0616,2006,2016);
+
+
+/* ======================================================================== */
+/*							QC STD ENROLLMENT DATA							*/
+/* ======================================================================== */	proc contents data=_null_;run;
+
+
+%macro enrl_id_counts(stdlib,dstin,ver,datyp);
+proc contents data = &stdlib..&dstin. details noprint
+			  out  = &wrk..&datsrc.&ver._&datyp.content(keep=libname memname name varnum type format label nobs) ; run;
+proc contents data = &stdlib..&dstin. details noprint
+			  out2 = &wrk..&datsrc.&ver._&datyp.content2(keep=libname member name type numvals) ; run;
+
+proc sql;
+create table &wrk..&datsrc.&ver._&datyp.uniid_tot as
+select distinct a.numVals as Unique_PATIDs,
+				b.nobs 	  as Observations
+from &wrk..&datsrc.&ver._&datyp.content2 as a
+full join &wrk..&datsrc.&ver._&datyp.content as b
+on a.name=b.name
+where a.name = 'PATID';
+;
+quit;
+
+%mend;
+*%enrl_id_counts(s_mks,enrollment0616,v4,enrl0616);
+
+
+%macro enrl_id_year_counts(stdlib,ver,dstin,datyp,year_strt,year_end);
+
+proc sql;
+create table &wrk..&datsrc.&ver._&datyp._uniid_byyear as
+select distinct year(enr_start_date) 	as Enrl_Start_Year label="Enrollment Start Year" , 
+				count(distinct patid) 	as Unique_PATIDs,
+				count(patid)			as Observations 
+from &stdlib..&dstin.
+group by year(enr_start_date) ;
+quit;
+
+%do year = &year_strt. %to &year_end. ;
+%let yr = %substr(&year.,3,2) ;
+
+proc sql;
+
+create table &wrk..&datsrc.&ver._&datyp.&yr._uniid_new1 as
+select distinct year(enr_start_date) as Enrl_Start_Year label="Enrollment Start Year" ,
+				count(distinct patid) as Unique_NewID_1_Year
+	from &stdlib..&dstin.
+		where year(enr_start_date) = &year. and patid not in
+			(select distinct patid from &stdlib..&dstin. where year(enr_start_date) = %eval(&year.-1) )
+;
+
+create table &wrk..&datsrc.&ver._&datyp.&yr._uniid_newall as
+select distinct year(enr_start_date) as Enrl_Start_Year label="Enrollment Start Year" ,
+				count(distinct patid) as Unique_NewID_AllPre_Year
+	from &stdlib..&dstin.
+		where year(enr_start_date) = &year. and patid not in
+			(select distinct patid from &stdlib..&dstin. where year(enr_start_date) <= %eval(&year.-1) )
+;
+quit;
+
+data &wrk..&datsrc.&ver._&datyp._uniid_new&yr. ;
+merge &wrk..&datsrc.&ver._&datyp.&yr._uniid_new1 
+	  &wrk..&datsrc.&ver._&datyp.&yr._uniid_newall ;
+by enrl_start_year ;
+run;
+
+%end ;
+
+data &wrk..&datsrc.&ver._&datyp._uniid_newall ;
+set	 &wrk..&datsrc.&ver._&datyp._uniid_new: ;
+run;
+
+proc sql;
+create table &datsrc.&ver._&datyp.uniid_all as
+select distinct a.enrl_start_year			label="Enrollment Start Year", 
+				a.Unique_PATIDs				label="Unique PATIDs" 		format comma12. , 
+				a.Observations				label="Observations" 		format comma12. ,
+				b.unique_newid_1_year 		label="Unique New PATIDs from Previous 1 Year" 		format comma12. ,
+				b.unique_newid_allpre_year 	label="Unique New PATIDs from All Previous Years"	format comma12. 
+from &wrk..&datsrc.&ver._&datyp._uniid_byyear as a
+left join &wrk..&datsrc.&ver._&datyp._uniid_newall as b
+on a.enrl_start_year = b.enrl_start_year 
+;
+quit;
+
+%mend;
+*%enrl_id_year_counts(s_mks,v4,enrollment0616,enrl0616,2006,2016) ;
+
+%macro QC_ENRL_VAR_FREQ_MEAN(STDLIB,DSTIN,DATYP,VER) ;/* ------ QC ENRL Vars ------ */
+
+	proc sql noprint ;			*<-------------- NUM_VAR_LIST ---------------;
+
+	select distinct name into:  NUM_VAR_LIST separated by ' ' from &wrk..&datsrc.&ver._&datyp.content
+		where type = 1 ; 
+
+	quit;
+
+	%let j=0 ;	
+	%do %while (%qscan(&num_var_list.,%eval(&j+1)) ne ) ;
+
+		%let j 			= %eval(&j+1) ;
+		%let numVar		= %scan(&num_var_list.,&j.) ;
+		%let numVarSrt	= %substr(&numVar,1,12) ;
+
+		proc means data = &STDLIB..&DSTIN.  maxdec=2 noprint ;
+			var &numVar. ;
+			output out = &wrk..&datsrc.&ver._&datyp.mean_&numVarSrt.(drop=_:) 
+						n=N nmiss=NMISS mean=MEAN std=STD min=MIN p1=P1 p5=P5 p10=P10 q1=Q1 median=MEDIAN q3=Q3 p90=P90 p95=P95 p99=P99 max=MAX ;
+		run;
+
+		data &wrk..&datsrc.&ver._&datyp.meand_&numVarSrt.
+			 &wrk..&datsrc.&ver._&datyp.meant_&numVarSrt.
+			 &wrk..&datsrc.&ver._&datyp.meann_&numVarSrt.
+			;
+			length VARNAME $25 ;
+		set &wrk..&datsrc.&ver._&datyp.mean_&numVarSrt. ;
+			VARNAME = "&numVar." ;
+			if lowcase(varname) in ('admit_date','discharge_date','begin_date','end_date','px_date','dispense_date','death_date',
+									'enr_start_date','enr_end_date','lab_order_date','specimen_date','result_date','measure_date')
+					then output &wrk..&datsrc.&ver._&datyp.meand_&numVarSrt. ;
+			else if lowcase(varname) in ('admit_time','discharge_time','specimen_time','result_time','measure_time')
+					then output &wrk..&datsrc.&ver._&datyp.meant_&numVarSrt. ;
+			else output &wrk..&datsrc.&ver._&datyp.meann_&numVarSrt. ;
+		run;
+
+	%end;
+
+	proc sql noprint ;			*<------------ CHAR_VAR_LIST --------------;
+
+	select distinct name into: CHAR_VAR_LIST separated by ' ' from &wrk..&datsrc.&ver._&datyp.content
+		where type = 2  ;
+
+	quit;
+
+	%let i=0 ;
+	%do %while (%qscan(&char_var_list.,%eval(&i+1)) ne ) ;
+
+		%let i 			= %eval(&i+1) ;
+		%let charVar	= %scan(&char_var_list.,&i.) ;
+		%let charVarSrt	= %substr(&charVar,1,15) ;
+
+		proc freq data = &STDLIB..&DSTIN.  order=freq noprint;
+			table &charVar.	/ missing out = &wrk..&datsrc.&ver._&datyp.freq_&charVarSrt. ;
+			format patid encounterid diagnosisid proceduresid dispensingid lab_result_cm_id providerid facilityid 
+					dx px ndc 
+					$mis_c. ;
+		run;
+
+		data &wrk..&datsrc.&ver._&datyp.freq_&charVarSrt./*(rename=(&charVar.=Contents))*/ ;
+			length VARNAME $25 Contents $25 Description $100 ;
+		set &wrk..&datsrc.&ver._&datyp.freq_&charVarSrt.(rename=(&charVar.=Contents)) ;
+		VARNAME = "&charVar." ;
+		if lowcase(varname) in ('patid','encounterid','diagnosisid','proceduresid','dispensingid','lab_result_cm_id','providerid','facilityid', 
+								'dx','px','ndc') then Description = strip(put(contents,$mis_c.));
+		else if lowcase(varName) in ('enr_basis') 	then Description = strip(put(contents,$enrbasis.));
+		else Description = strip(&charVar.) ;
+		*drop &charVar. ;
+		run;
+
+	%end;
+
+	data &datsrc.&ver._&datyp.freqs_all ; 
+	length VARNAME $25 Contents $25 Description $100 ;
+	set &wrk..&datsrc.&ver._&datyp.freq_: ;
+	run;
+
+	data &datsrc.&ver._&datyp.means_datall(drop=mean_ std_) ;
+	set &wrk..&datsrc.&ver._&datyp.meand_:(rename=(n=N_ nmiss=NMISS_ mean=MEAN_ std=STD_ min=MIN_ p1=P1_ p5=P5_ p10=P10_ q1=Q1_ median=MEDIAN_ q3=Q3_ p90=P90_ p95=P95_ p99=P99_ max=MAX_)) ;
+	format mean_ -- max_ mmddyy10. ;
+	run;
+
+	data &datsrc.&ver._&datyp.means_timall(drop=mean_ std_) ;
+	set &wrk..&datsrc.&ver._&datyp.meant_:(rename=(n=N_ nmiss=NMISS_ mean=MEAN_ std=STD_ min=MIN_ p1=P1_ p5=P5_ p10=P10_ q1=Q1_ median=MEDIAN_ q3=Q3_ p90=P90_ p95=P95_ p99=P99_ max=MAX_)) ;
+	format mean_ -- max_ time5. ;
+	run;
+
+	data &datsrc.&ver._&datyp.means_numall ;
+	set &wrk..&datsrc.&ver._&datyp.meann_:n=N_ nmiss=NMISS_ mean=MEAN_ std=STD_ min=MIN_ p1=P1_ p5=P5_ p10=P10_ q1=Q1_ median=MEDIAN_ q3=Q3_ p90=P90_ p95=P95_ p99=P99_ max=MAX_)) ;
+	format mean_ -- max_ best12. ;
+	run;
+
+%mend;
+*%qc_enrl_var_freq_mean(S_MKS,ENROLLMENT0616,ENRL0616,V4);
+
+%macro report_enrl(VER,DATYP,YEAR_STRT,YEAR_END);			/* ----------- REPORT FOR ENROLLMENT FILE ------------ */
+
+proc report data = &datsrc.&ver._&datyp.uniid_all ;
+columns enrl_start_year unique_patids observations unique_newid_1_year unique_newid_allpre_year ;
+define enrl_start_year			/ group 	'Enrollment Start Year'	width=4 ;
+define unique_patids 			/ display 	'Unique PATIDs' 		width=15 	format=comma15. ;
+define observations 			/ display 	'Total Observations'	width=20 	format=comma15. ;
+define unique_newid_1_year		/ display 	'Unique New PATIDs from Previous 1 Year'	width=20	format=comma15. ;
+define unique_newid_allpre_year	/ display	'Unique New PATIDs from Previous ALL Years'	width=20	format=comma15. ;
+title "====== QC Standardized &DATSRC. Enrollment0616 Data (&year_strt. - &year_end.) ======" ;
+title2 "&datyp. PATIDs/Observations Total/New Counts" ;
+run;
+
+proc report data = &datsrc.&ver._&datyp.freqs_all ;
+columns varname contents count percent ;
+define varname 	/ group 	'Variable Name'		width=32 ;
+define contents	/ display 	'Variable Values'	width=25 ;
+define description	/ display 	'Description'	width=100 ;
+define count	/ display 	'Frequency'			width=20	format=comma15. ;
+define percent	/ display 	'Percent'			width=10	format=6.2 ;
+title2 "&datyp. Character Variable Frequencies" ;
+run;
+
+proc report data = &datsrc.&ver._&datyp.means_numall ;
+columns varname n_ nmiss_ mean_ std_ min_ p1_ p5_ p10_ q1_ median_ q3_ p90_ p95_ p99_ max_ ;
+define varname	/ group		'Variable Name' 		width=32 ;
+define n_		/ display	'Observations'			width=20	format=comma15. ;
+define nmiss_	/ display	'Missing Observations'	width=20	format=comma15. ;
+define mean_	/ display	'Observation Mean'		width=10 ;
+define std_		/ display	'Standard Deviation'	width=10 ;
+define min_		/ display 	'Minimum Value'			width=10 ;
+define p1_		/ display	'1st Percent'			width=10 ;
+define p5_		/ display 	'5th Percent'			width=10 ;
+define p10_		/ display 	'10th Percent'			width=10 ;
+define q1_		/ display	'25th Percent'			width=10 ;
+define median_	/ display 	'Observation Median'	width=10 ;
+define q3_		/ display	'75th Percent'			width=10 ;
+define p90_		/ display 	'90th Percent'			width=10 ;
+define p95_		/ display	'95th Percent'			width=10 ;
+define p99_		/ display	'99th Percent'			width=10 ;
+define max_		/ display	'Maximum Value'			width=10 ;
+title2 "&datyp. Numeric Variable Distribution" ;
+run;
+
+proc report data = &datsrc.&ver._&datyp.means_datall ;
+columns varname n_ nmiss_ /*mean_ std_*/ min_ p1_ p5_ p10_ q1_ median_ q3_ p90_ p95_ p99_ max_ ;
+define varname	/ group		'Variable Name' 		width=32 ;
+define n_		/ display	'Observations'			width=20	format=comma15. ;
+define nmiss_	/ display	'Missing Observations'	width=20	format=comma15. ;
+*define mean	/ display	'Observation Mean'		width=10 ;
+*define std		/ display	'Standard Deviation'	width=10 ;
+define min_		/ display 	'Minimum Value'			width=10 ;
+define p1_		/ display	'1st Percent'			width=10 ;
+define p5_		/ display 	'5th Percent'			width=10 ;
+define p10_		/ display 	'10th Percent'			width=10 ;
+define q1_		/ display	'25th Percent'			width=10 ;
+define median_	/ display 	'Observation Median'	width=10 ;
+define q3_		/ display	'75th Percent'			width=10 ;
+define p90_		/ display 	'90th Percent'			width=10 ;
+define p95_		/ display	'95th Percent'			width=10 ;
+define p99_		/ display	'99th Percent'			width=10 ;
+define max_		/ display	'Maximum Value'			width=10 ;
+title2 "&datyp. Dates Variable Distribution" ;
+run;
+
+proc report data = &datsrc.&ver._&datyp.means_timall ;
+columns varname n_ nmiss_ /*mean_ std_*/ min_ p1_ p5_ p10_ q1_ median_ q3_ p90_ p95_ p99_ max_ ;
+define varname	/ group		'Variable Name' 		width=32 ;
+define n_		/ display	'Observations'			width=20	format=comma15. ;
+define nmiss_	/ display	'Missing Observations'	width=20	format=comma15. ;
+*define mean	/ display	'Observation Mean'		width=10 ;
+*define std		/ display	'Standard Deviation'	width=10 ;
+define min_		/ display 	'Minimum Value'			width=10 ;
+define p1_		/ display	'1st Percent'			width=10 ;
+define p5_		/ display 	'5th Percent'			width=10 ;
+define p10_		/ display 	'10th Percent'			width=10 ;
+define q1_		/ display	'25th Percent'			width=10 ;
+define median_	/ display 	'Observation Median'	width=10 ;
+define q3_		/ display	'75th Percent'			width=10 ;
+define p90_		/ display 	'90th Percent'			width=10 ;
+define p95_		/ display	'95th Percent'			width=10 ;
+define p99_		/ display	'99th Percent'			width=10 ;
+define max_		/ display	'Maximum Value'			width=10 ;
+title2 "&datyp. Times Variable Distribution" ;
+run;
+%mend;
+
+%macro final_report_enrl(VER,DATYP,YEAR_STRT,YEAR_END);
+
+options orientation=landscape ;
+ods rtf file="&outpath.\&factsfolder.\QC_STD_&VER._&DATSRC._&DATYP. YEAR &YEAR_STRT.-&YEAR_END..rtf"
+		bodytitle startpage=no keepn notoc_data ;
+
+%report_enrl(&VER.,&DATYP.,&YEAR_STRT.,&YEAR_END.);
+
+ods rtf close;
+
+%mend;
+*%final_report_enrl(V4,DATYP,2006,2016);
+
+/* ======================================================================== */
+/*							QC STD DIAGNOSIS DATA							*/
+/* ======================================================================== */	proc contents data=_null_;run;
+
+
+%macro pulUniPID(stdlib,dstin,datyp,ver,year_strt,year_end); 				/* <---------- PULL UNIQUE PIDS ---------- */
+
+%do year = &year_strt. %to &year_end. ;
+%let yr	 = %substr(&year.,3,2) ;
+
+proc sort data=&stdlib..&dstin.&year.(keep=patid) nodupkey
+		  out =&kep..&datsrc.&ver._&datyp.&yr._ID(compress=binary) ;
+by patid ;
+run ;
+
+data &kep..&datsrc.&ver._&datyp.&yr._ID(compress=binary) ;
+set &kep..&datsrc.&ver._&datyp.&yr._ID ;
+Year = input("&year.",best4.) ;
+run;
+
+proc append base=&kep..&datsrc.&ver._&datyp._allID(compress=yes)
+			data=&kep..&datsrc.&ver._&datyp.&yr._ID 	force ;
+quit;run;
+
+%end ;
+
+%mend;
+
+
+%macro uniid_count(stdlib,dstin,datyp,Ver,year_strt,year_end);				/* ------------ UNI ID Counts ---------- */
+
+%do year = &year_strt. %to &year_end. ;
+%let yr	 = %substr(&year.,3,2) ;
+
+* --------- Count Unique IDs & Observations --------- ;
+
+proc contents data = &stdlib..&dstin.&year. details noprint
+			  out  = &wrk..&datsrc.&ver._&datyp.&yr.content(keep=libname memname name varnum type format label nobs) ; run;
+proc contents data = &stdlib..&dstin.&year. details noprint
+			  out2 = &wrk..&datsrc.&ver._&datyp.&yr.content2(keep=libname member name type numvals) ; run;
+
+proc sql;
+create table &wrk..&datsrc.&ver._&datyp.&yr.uniid_tot as
+select distinct input("&year.",best4.) as Year,
+				a.numVals as Unique_PATIDs,
+				b.nobs 	  as Observations
+from &wrk..&datsrc.&ver._&datyp.&yr.content2 as a
+full join &wrk..&datsrc.&ver._&datyp.&yr.content as b
+on a.name=b.name
+where a.name = 'PATID';
+;
+quit;
+
+%end ;
+
+%mend;
+
+
+%macro newid_count(ver,datyp,year_strt,year_end);							/* ------------- NEW ID Counts ------------ */
+
+%do year = &year_strt. %to &year_end. ;
+
+%let yr			= %substr(&year,3,2) ;
+%let preyear 	= %eval(&year.-1) ;
+
+/* -------------- COUNT NEW IDs -------------- */
+
+proc sql;
+
+create table &wrk..&datsrc.&ver._&datyp.&yr.uniid_new1 as
+select distinct year, count(distinct patid) as Unique_NewID_1_Year 
+	from &kep..&datsrc.&ver._&datyp._allID
+		where year = &year. and patid not in 
+			(select distinct patid from &kep..&datsrc.&ver._&datyp._allID where year = &preyear.) ;
+
+create table &wrk..&datsrc.&ver._&datyp.&yr.uniid_newall as
+select distinct year, count(distinct patid) as Unique_NewID_AllPre_Year
+	from &kep..&datsrc.&ver._&datyp._allID
+		where year = &year. and patid not in
+			(select distinct patid from &kep..&datsrc.&ver._&datyp._allID where year < &year.) ;
+quit;
+
+%end;
+
+%mend;
+
+
+%macro QC_VAR_FREQ_MEAN(STDLIB,DSTIN,DATYP,VER,YEAR_STRT,YEAR_END) ;		/* --------- Freq of Vars --------- */
+
+%do year = &year_strt %to &year_end ;
+%let yr	 = %substr(&year,3,2) ;
+
+	proc sql noprint ;	*<-------- NUM_VAR_LIST ---------;
+
+	select distinct name into:  NUM_VAR_LIST separated by ' ' from &wrk..&datsrc.&ver._&datyp.&yr.content
+		where type = 1 ; 
+
+	quit;
+
+	%let j=0 ;	
+	%do %while (%qscan(&num_var_list.,%eval(&j+1)) ne ) ;
+
+		%let j 			= %eval(&j+1) ;
+		%let numVar		= %scan(&num_var_list.,&j.) ;
+		%let numVarSrt	= %substr(&numVar,1,15) ;
+
+		proc means data = &STDLIB..&DSTIN.&year.  maxdec=2 noprint ;
+			var &numVar. ;
+			output out = &wrk..&datsrc.&ver._&datyp.&yr.mean_&numVarSrt.(drop=_:) 
+							n=N nmiss=NMISS mean=MEAN std=STD min=MIN p1=P1 p5=P5 p10=P10 q1=Q1 median=MEDIAN q3=Q3 p90=P90 p95=P95 p99=P99 max=MAX ;
+		run;
+
+		data &wrk..&datsrc.&ver._&datyp.meand&yr._&numVarSrt.
+			 &wrk..&datsrc.&ver._&datyp.meant&yr._&numVarSrt.
+			 &wrk..&datsrc.&ver._&datyp.meann&yr._&numVarSrt.
+			;
+			length VARNAME $25 ;
+		set &wrk..&datsrc.&ver._&datyp.&yr.mean_&numVarSrt. ;
+			VARNAME = "&numVar." ;
+			if lowcase(varname) in ('admit_date','discharge_date','begin_date','end_date','px_date','dispense_date','death_date',
+									'enr_start_date','enr_end_date','lab_order_date','specimen_date','result_date','measure_date')
+					then output &wrk..&datsrc.&ver._&datyp.meand&yr._&numVarSrt. ;
+			else if lowcase(varname) in ('admit_time','discharge_time','specimen_time','result_time','measure_time')
+					then output &wrk..&datsrc.&ver._&datyp.meant&yr._&numVarSrt. ;
+			else output &wrk..&datsrc.&ver._&datyp.meann&yr._&numVarSrt. ;
+		run;
+
+	%end;
+
+	proc sql noprint ;	*<------ CHAR_VAR_LIST --------;
+
+	select distinct name into: CHAR_VAR_LIST separated by ' ' from &wrk..&datsrc.&ver._&datyp.&yr.content
+		where type = 2 ;
+
+	quit;
+
+	%let i=0 ;
+	%do %while (%qscan(&char_var_list.,%eval(&i+1)) ne ) ;
+
+		%let i 			= %eval(&i+1) ;
+		%let charVar	= %scan(&char_var_list.,&i.) ;
+		%let charVarSrt	= %substr(&charVar,1,15) ;
+
+		proc freq data = &STDLIB..&DSTIN.&year.  order=freq noprint;
+			table &charVar.	/ missing out = &wrk..&datsrc.&ver._&datyp.&yr.freq_&charVarSrt. ;
+			format patid encounterid diagnosisid proceduresid dispensingid prescriberid prescribingid pharmacyid lab_result_cm_id providerid facilityid 
+					dx px ndc lab_loinc lab_px 
+					norm_range_high norm_range_low result_qual result_unit 
+					raw_gnn strength dispense_route 
+					$mis_c. ;
+		run;
+
+		data &wrk..&datsrc.&ver._&datyp.&yr.freq_&charVarSrt./**/ ;
+			length VARNAME $25 Contents $25 Description $100 ;
+		set &wrk..&datsrc.&ver._&datyp.&yr.freq_&charVarSrt.(rename=(&charVar.=Contents)) ;
+		VARNAME = "&charVar." ;
+		if lowcase(varname) in ('patid','encounterid','diagnosisid','proceduresid','dispensingid','prescriberid','prescribingid','pharmacyid','lab_result_cm_id','providerid','facilityid', 
+								'dx','px','ndc','lab_loinc','lab_px','norm_range_high','norm_range_low','result_qual','result_unit','raw_gnn','strength','dispense_route') 
+			then do;
+				Contents	= strip(put(contents,$mis_c.));
+				Description = strip(put(contents,$mis_c.));
+			end;
+		else if lowcase(varname) in ('admit_type')				then Description = strip(put(contents,$admitType.)) ;
+		else if lowcase(varname) in ('admitting_source')		then Description = strip(put(contents,$admitSource.)) ;
+		else if lowcase(varname) in ('pdx','ppx')				then Description = strip(put(contents,$pdx.)) ;
+		else if lowcase(varname) in ('dx_poa')					then Description = strip(put(contents,$dxpoa.)) ;
+		else if lowcase(varname) in ('dx_source')				then Description = strip(put(contents,$dxSource.)) ;
+		else if lowcase(varname) in ('dx_origin')				then Description = strip(put(contents,$dxOrig.)) ;
+		else if lowcase(varname) in ('drg')						then Description = strip(put(contents,$drg.)) ;
+		else if lowcase(varname) in ('drg_type')				then Description = strip(put(contents,$drgTyp.)) ;
+		else if lowcase(varname) in ('discharge_status')		then Description = strip(put(contents,$dischargeStatus.)) ;
+		else if lowcase(varname) in ('provider_type')			then Description = strip(put(contents,$providerType.)) ;
+		else if lowcase(varname) in ('facility_type')			then Description = strip(put(contents,$facilityType.)) ;
+		else if lowcase(varname) in ('px_type','lab_px_type')	then Description = strip(put(contents,$labPxType.)) ;
+		else if lowcase(varname) in ('px_source')				then Description = strip(put(contents,$pxSource.)) ;
+		else if lowcase(varname) in ('prescriberid_type')		then Description = strip(put(contents,$prescriberIDType.)) ;
+		else if lowcase(varname) in ('abn_ind')					then Description = strip(put(contents,$abnInd.)) ;
+		else if lowcase(varname) in ('norm_modifier_low','norm_modifier_high')	
+																then Description = strip(put(contents,$norm_modifier.)) ;
+		else if lowcase(varname) in ('vital_source')			then Description = strip(put(contents,$vitalSource.)) ;
+*		else if lowcase(varname) in ('')					then Description = strip(put(contents,$.)) ;
+		else Description = strip(contents) ;
+		*drop &charVar. ;
+		run;
+
+	%end;
+
+	proc freq data = &STDLIB..&DSTIN.&year.  order=freq noprint;
+			table SOURCE * ENC_TYPE	/ list missing out = &wrk..&datsrc.&ver._&datyp.&yr.freq_SRC_ENC ;
+	run;
+	data &wrk..&datsrc.&ver._&datyp.&yr.freq_SRC_ENC ;
+		length VARNAME $25 Contents $25 Description $100/**/ ;
+	set &wrk..&datsrc.&ver._&datyp.&yr.freq_SRC_ENC ;
+		varname = "SOURCE vs ENC_TYPE" ;
+
+		Contents = strip(source)||' vs '||strip(enc_type) ;
+	run ;
+
+%end;
+
+%mend;
+
+
+/*%macro prepare_report_by_file(ver,datyp,year_strt,year_end) ;*/
+%macro combo_freqs(VER,DATYP,YEAR);
+
+%let yr = %substr(&year.,3,2);
+
+data &datsrc.&ver._&datyp.freqs&yr. ; 
+length VARNAME $25 Contents $25 Description $100 ;
+set &wrk..&datsrc.&ver._&datyp.&yr.freq_: ;
+run;
+
+data &datsrc.&ver._&datyp.means_dats&yr.(drop=mean_ std_) ;
+set &wrk..&datsrc.&ver._&datyp.meand&yr._:(rename=(n=N_ nmiss=NMISS_ mean=MEAN_ std=STD_ min=MIN_ p1=P1_ p5=P5_ p10=P10_ q1=Q1_ median=MEDIAN_ q3=Q3_ p90=P90_ p95=P95_ p99=P99_ max=MAX_)) ;
+format mean_ -- max_ mmddyy10. ;
+run;
+
+data &datsrc.&ver._&datyp.means_tims&yr.(drop=mean_ std_) ;
+set &wrk..&datsrc.&ver._&datyp.meant&yr._:(rename=(n=N_ nmiss=NMISS_ mean=MEAN_ std=STD_ min=MIN_ p1=P1_ p5=P5_ p10=P10_ q1=Q1_ median=MEDIAN_ q3=Q3_ p90=P90_ p95=P95_ p99=P99_ max=MAX_)) ;
+format mean_ -- max_ time5. ;
+run;
+
+data &datsrc.&ver._&datyp.means_nums&yr. ;
+set &wrk..&datsrc.&ver._&datyp.meann&yr._:(rename=(n=N_ nmiss=NMISS_ mean=MEAN_ std=STD_ min=MIN_ p1=P1_ p5=P5_ p10=P10_ q1=Q1_ median=MEDIAN_ q3=Q3_ p90=P90_ p95=P95_ p99=P99_ max=MAX_)) ;
+format mean_ -- max_ best12. ;
+run;
+
+%mend;
+
+%macro combo_pid_counts(VER,DATYP,YEAR_STRT,YEAR_END);
+
+%do year = &year_strt. %to &year_end. ;
+%let yr = %substr(&year.,3,2) ;
+
+data &datsrc.&ver._&datyp._pid_sum&yr. ;
+merge 	&wrk..&datsrc.&ver._&datyp.&yr.uniid_tot
+		&wrk..&datsrc.&ver._&datyp.&yr.uniid_new1
+		&wrk..&datsrc.&ver._&datyp.&yr.uniid_newall
+;
+by year ;
+label 	Unique_PATIDs 				= "Unique PATIDs"
+		Observations				= "Observations"
+		unique_newid_1_year			= "Unique New PATIDs from Previous 1 Year"
+		unique_newid_allpre_year	= "Unique New PATIDs from All Previous Years"
+;
+run;
+
+%end;
+
+data &datsrc.&ver._&datyp._PID_ALL_summary ;
+set  &datsrc.&ver._&datyp._pid_sum: ;
+run;
+
+%mend;
+
+
+%macro report_overall(VER,DATYP,YEAR_STRT,YEAR_END);	/* ==================== REPORTS OVERALL ===================== */
+
+proc report data = &datsrc.&ver._&datyp._PID_ALL_summary ;
+columns year unique_patids observations unique_newid_1_year unique_newid_allpre_year ;
+define year 					/ group 	'Year' 					width=4 ;
+define unique_patids 			/ display 	'Unique PATIDs' 		width=15 	format=comma10. ;
+define observations 			/ display 	'Total Observations'	width=20 	format=comma15. ;
+define unique_newid_1_year		/ display 	'Unique New PATIDs from Previous 1 Year'	width=20	format=comma10. ;
+define unique_newid_allpre_year	/ display	'Unique New PATIDs from Previous ALL Years'	width=20	format=comma10. ;
+title "========= QC Standardized &DATSRC. &DATYP. Data Year &YEAR_STRT. - &YEAR_END. =========" ;
+title2 "Summary of ALL Years &datyp. PATIDs/Observations Total/New Counts" ;
+run;
+title;title2;
+
+%mend;
+
+
+%macro report_by_year(VER,DATYP,YEAR);					/* ==================== REPORTS BYYEAR ===================== */
+
+%let yr = %substr(&year.,3,2) ;
+
+proc report data = &datsrc.&ver._&datyp._pid_sum&yr. ;
+columns year unique_patids observations unique_newid_1_year unique_newid_allpre_year ;
+define year 				/ group 	'Year' 					width=4 ;
+define unique_patids 		/ display 	'Unique PATIDs' 		width=15 	format=comma15. ;
+define observations 		/ display 	'Total Observations'	width=20 	format=comma15. ;
+define unique_newid_1_year	/ display 	'Unique New PATIDs from Previous 1 Year'		width=20	format=comma15. ;
+define unique_newid_allpre_year	/ display	'Unique New PATIDs from Previous ALL Years'	width=20	format=comma15. ;
+title "================ QC Standardized &DATSRC. &DATYP. Data in Year &year. ================" ;
+title2 "&year. &datyp. PATIDs/Observations Total/New Counts" ;
+run;
+
+proc report data = &datsrc.&ver._&datyp.means_nums&yr. ;
+columns varname n_ nmiss_ mean_ std_ min_ p1_ p5_ p10_ q1_ median_ q3_ p90_ p95_ p99_ max_ ;
+define varname	/ group		'Variable Name' 		width=32 ;
+define n_		/ display	'Observations'			width=20	format=comma15. ;
+define nmiss_	/ display	'Missing Observations'	width=20	format=comma15. ;
+define mean_	/ display	'Observation Mean'		width=10 ;
+define std_		/ display	'Standard Deviation'	width=10 ;
+define min_		/ display 	'Minimum Value'			width=10 ;
+define p1_		/ display	'1st Percent'			width=10 ;
+define p5_		/ display 	'5th Percent'			width=10 ;
+define p10_		/ display 	'10th Percent'			width=10 ;
+define q1_		/ display	'25th Percent'			width=10 ;
+define median_	/ display 	'Observation Median'	width=10 ;
+define q3_		/ display	'75th Percent'			width=10 ;
+define p90_		/ display 	'90th Percent'			width=10 ;
+define p95_		/ display	'95th Percent'			width=10 ;
+define p99_		/ display	'99th Percent'			width=10 ;
+define max_		/ display	'Maximum Value'			width=10 ;
+title2 "&year. &datyp. Numeric Variable Distribution" ;
+run;
+
+proc report data = &datsrc.&ver._&datyp.means_dats&yr. ;
+columns varname n_ nmiss_ mean_ std_ min_ p1_ p5_ p10_ q1_ median_ q3_ p90_ p95_ p99_ max_ ;
+define varname	/ group		'Variable Name' 		width=32 ;
+define n_		/ display	'Observations'			width=20	format=comma15. ;
+define nmiss_	/ display	'Missing Observations'	width=20	format=comma15. ;
+*define mean	/ display	'Observation Mean'		width=10 ;
+*define std		/ display	'Standard Deviation'	width=10 ;
+define min_		/ display 	'Minimum Value'			width=10 ;
+define p1_		/ display	'1st Percent'			width=10 ;
+define p5_		/ display 	'5th Percent'			width=10 ;
+define p10_		/ display 	'10th Percent'			width=10 ;
+define q1_		/ display	'25th Percent'			width=10 ;
+define median_	/ display 	'Observation Median'	width=10 ;
+define q3_		/ display	'75th Percent'			width=10 ;
+define p90_		/ display 	'90th Percent'			width=10 ;
+define p95_		/ display	'95th Percent'			width=10 ;
+define p99_		/ display	'99th Percent'			width=10 ;
+define max_		/ display	'Maximum Value'			width=10 ;
+title2 "&year. &datyp. Dates Variable Distribution" ;
+run;
+
+proc report data = &datsrc.&ver._&datyp.means_tims&yr. ;
+columns varname n_ nmiss_ mean_ std_ min_ p1_ p5_ p10_ q1_ median_ q3_ p90_ p95_ p99_ max_ ;
+define varname	/ group		'Variable Name' 		width=32 ;
+define n_		/ display	'Observations'			width=20	format=comma15. ;
+define nmiss_	/ display	'Missing Observations'	width=20	format=comma15. ;
+*define mean	/ display	'Observation Mean'		width=10 ;
+*define std		/ display	'Standard Deviation'	width=10 ;
+define min_		/ display 	'Minimum Value'			width=10 ;
+define p1_		/ display	'1st Percent'			width=10 ;
+define p5_		/ display 	'5th Percent'			width=10 ;
+define p10_		/ display 	'10th Percent'			width=10 ;
+define q1_		/ display	'25th Percent'			width=10 ;
+define median_	/ display 	'Observation Median'	width=10 ;
+define q3_		/ display	'75th Percent'			width=10 ;
+define p90_		/ display 	'90th Percent'			width=10 ;
+define p95_		/ display	'95th Percent'			width=10 ;
+define p99_		/ display	'99th Percent'			width=10 ;
+define max_		/ display	'Maximum Value'			width=10 ;
+title2 "&year. &datyp. Times Variable Distribution" ;
+run;
+
+proc report data = &datsrc.&ver._&datyp.freqs&yr. ;
+columns varname contents description count percent ;
+define varname 	/ group 	'Variable Name'		width=32 ;
+define contents	/ display 	'Variable Values'	width=25 	format=$25. ;
+define description	/ display 	'Description'	width=100 ;
+define count	/ display 	'Frequency'			width=20	format=comma15. ;
+define percent	/ display 	'Percent'			width=10	format=6.2 ;
+title2 "&year. &datyp. Character Variable Frequencies" ;
+run;
+
+%mend;
+
+
+
+/* ======================================================================== */
+/*						QC DISEASE FROM STD DATA: RA						*/
+/* ======================================================================== */proc contents data=_null_;run;
+
+%macro RA_DXS(STDLIB,DSTIN,VER,YEAR_STRT,YEAR_END,PROVTYP);
+
+%do year = &year_strt. %to &year_end. ;
+%let yr	 = %substr(&year.,3,2) ;
+
+data &vew..&datsrc.&ver._RA_DX&yr. / view=&vew..&datsrc.&ver._RA_DX&yr. ;
+set &STDLIB..&dstin.&year. ;
+if compress(dx,'. ') in ('7140','7142','71481') or 
+	upcase(substr(compress(dx,'. '),1,3)) in ('M05','M06') and upcase(substr(compress(dx,'. '),1,4)) not in ('M064') ;
+if strip(provider_type) in &provTyp. then PROV_SPEC=1 ; else PROV_SPEC=0 ;
+run ;
+
+proc sort data=&vew..&datsrc.&ver._ra_dx&yr.
+		  out =&wrk..&datsrc.&ver._ra_dx&yr.(compress=binary) ;
+by patid admit_date ;
+run;
+
+data &wrk..&datsrc.&ver._ra_dx&yr._(compress=binary) ;
+set  &wrk..&datsrc.&ver._ra_dx&yr.(where=(enc_type^='OT')) ;
+by patid admit_date ;
+
+retain _1st_RA_DX_Date _2nd_RA_DX_Date _1st_RA_DX_Spec_Date ;
+
+lag_date = lag(admit_date) ;
+
+if first.patid then do;
+	_1st_RA_DX_Date = admit_date ;
+	_2nd_RA_DX_Date = . ;
+	_1st_RA_DX_Spec_Date = . ;
+	lag_date = . ;
+end;
+
+else if admit_date - lag_date >7 and _2nd_ra_dx_date = . then _2nd_ra_dx_date = admit_date ;
+
+if prov_spec = 1 and _1st_ra_dx_spec_date = . then _1st_ra_dx_spec_date = admit_date ;
+
+format _1st_: _2nd_: lag_: mmddyy10. ;
+
+keep patid _1st_: _2nd_: ;
+
+if last.patid ;
+
+run;
+
+proc sql;
+
+create table &wrk..&datsrc.&ver._ra_DX&yr._count as
+select 	distinct input("&year.",best4.) as Year, patid, 
+		count(distinct admit_date) as Unique_RA_DX_DATEs_perPATID,
+		sum(prov_spec) as RA_DX_from_Spec label="Observations of RA DX From Specialties"
+from &vew..&datsrc.&ver._ra_DX&yr.
+where enc_type ^= 'OT'
+group by patid ;
+
+create table &wrk..&datsrc.&ver._ra_DX&yr._count2 as
+select distinct input("&year.",best4.) as Year, count(distinct patid) as Unique_PATIDs_w_RA_DX
+from &wrk..&datsrc.&ver._ra_DX&yr._count ;
+
+quit;
+
+
+proc means data = &wrk..&datsrc.&ver._ra_DX&yr._count  maxdec=2 noprint ;
+	var Unique_RA_DX_DATEs_perPATID ;
+	output out = &wrk..&datsrc.&ver._raDX&yr.mean_uniRADats(drop=_:) 
+		n=N nmiss=NMISS mean=MEAN std=STD min=MIN p1=P1 p5=P5 p10=P10 q1=Q1 median=MEDIAN q3=Q3 p90=P90 p95=P95 p99=P99 max=MAX ;
+run;
+
+proc means data = &wrk..&datsrc.&ver._ra_DX&yr._count  maxdec=2 noprint ;
+	var RA_DX_from_Spec ;
+	output out = &wrk..&datsrc.&ver._RADX&yr.mean_RASpecs(drop=_:) 
+		n=N nmiss=NMISS mean=MEAN std=STD min=MIN p1=P1 p5=P5 p10=P10 q1=Q1 median=MEDIAN q3=Q3 p90=P90 p95=P95 p99=P99 max=MAX ;
+run;
+
+%end;
+
+%mend;
+
+%macro append_ra_dx_id(ver,year_strt,year_end);
+%do year = &year_strt. %to &year_end. ;
+%let yr	 = %substr(&year.,3,2) ;
+
+proc append base=&kep..&datsrc.&ver._radx_allID(compress=yes)
+			data=&wrk..&datsrc.&ver._ra_DX&yr._count 	force ;
+quit;run;
+
+%end;
+%mend;
+
+
+%macro RA_RXS_NDC(STDLIB,DSTIN,VER,DATYP,YEAR_STRT,YEAR_END);
+
+%do year = &year_strt. %to &year_end. ;
+%let yr	 = %substr(&year.,3,2) ;
+
+data &wrk..&datsrc.&ver._RA_&datyp.&yr. ;
+if _n_ = 1 then do;
+	declare hash hs(dataset:"ndcs.ndc_dmard_bio (where=(codeType='NDC') rename=(code=NDC))",ordered:'a',multidata:'y');
+	hs.definekey('NDC');
+	hs.definedata('NDC','gnn','str','rt','category','subcate');
+	hs.definedone();
+end;
+if 0 then set ndcs.ndc_dmard_bio ;
+set &STDLIB..&dstin.&year. ;
+rc=hs.find() ;
+do while(rc=0);
+	output;
+	rc=hs.find_next();
+end;
+run;
+
+proc sort data=&wrk..&datsrc.&ver._RA_&datyp.&yr. nodup ;
+by patid dispense_date ;
+run;
+proc sort data=&wrk..&datsrc.&ver._RA_&datyp.&yr. nodupkey
+		  out =&wrk..&datsrc.&ver._RA_&datyp.&yr._(keep=patid dispense_date rename=(dispense_date=_1st_RA_&datyp._Date) ) ;
+by patid ;
+run;
+
+%end;
+
+%mend;
+
+
+%macro RA_PXS_NDC(STDLIB,DSTIN,VER,DATYP,YEAR_STRT,YEAR_END);
+
+%do year = &year_strt. %to &year_end. ;
+%let yr	 = %substr(&year.,3,2) ;
+
+data &wrk..&datsrc.&ver._RA_&datyp.&yr. ;
+if _n_ = 1 then do;
+	declare hash hs(dataset:"ndcs.ndc_dmard_bio (where=(codeType='HCPCS') rename=(code=PX))",ordered:'a',multidata:'y');
+	hs.definekey('PX');
+	hs.definedata('PX','gnn','str','rt','category','subcate');
+	hs.definedone();
+end;
+if 0 then set ndcs.ndc_dmard_bio ;
+set &STDLIB..&dstin.&year. ;
+rc=hs.find() ;
+do while(rc=0);
+	output;
+	rc=hs.find_next();
+end;
+run;
+
+proc sort data=&wrk..&datsrc.&ver._RA_&datyp.&yr. nodup ;
+by patid px_date ;
+run;
+proc sort data=&wrk..&datsrc.&ver._RA_&datyp.&yr. nodupkey
+		  out =&wrk..&datsrc.&ver._RA_&datyp.&yr._(keep=patid &datyp._date rename=(&datyp._date=_1st_RA_RX&datyp._Date) ) ;
+by patid ;
+run;
+
+%end;
+
+%mend;
+
+
+%macro RA_DXRXPX(VER,YEAR_STRT,YEAR_END);
+
+%do year = &year_strt. %to &year_end. ;
+%let yr = %substr(&year.,3,2) ;
+
+data  &wrk..&datsrc.&ver._ra_DXRXPX&yr. (compress=binary) ;
+merge &wrk..&datsrc.&ver._ra_dx&yr._
+	  &wrk..&datsrc.&ver._ra_ndc&yr._
+	  &wrk..&datsrc.&ver._ra_px&yr._ ;
+by patid ;
+run ;
+
+proc contents data = &wrk..&datsrc.&ver._ra_DXRXPX&yr. noprint 
+			  out  = &datsrc.&ver._ra&yr._drpx_vars (keep=name varnum ) ; run ;
+proc sql noprint; select distinct name into: varlist separated by ' ' from &datsrc.&ver._ra&yr._drpx_vars where varnum>1 ; quit ;
+
+	%let i = 0 ;
+	%do %while(%qscan(&varlist.,%eval(&i+1)) ne ) ;
+		%let i = %eval(&i+1) ;
+		%let var = %scan(&varlist,&i);
+		%let varsrt = %substr(&var.,2,14);
+
+			proc freq data=&wrk..&datsrc.&ver._ra_dxrxpx&yr. noprint ;
+			table &var. / missing list out= &wrk..&datsrc.&ver._rafreq&yr._&varsrt. ;
+			format &var. mis_n. ;
+			run;
+
+			data &wrk..&datsrc.&ver._rafreq&yr._&varsrt. ;
+				length VARNAME $25 ;
+			set  &wrk..&datsrc.&ver._rafreq&yr._&varsrt. ;
+			VARNAME = strip(VNAME(&var.)) ;
+			rename &var.=Contents ;
+			run;
+	%end;
+
+proc freq data=&wrk..&datsrc.&ver._ra_dxrxpx&yr. noprint ;
+	table _1st_ra_dx_date * _2nd_ra_dx_date * _1st_ra_ndc_date * _1st_ra_rxpx_date / missing list out= &wrk..&datsrc.&ver._rafreq&yr._2dx1rx ;
+	format _1st_: _2nd_: mis_n. ;
+run;
+
+%end;
+
+%mend;
+
+
+%macro PREP_RA_REPORT(VER,YEAR_STRT,YEAR_END);		/* ------------------- PREPARE RA REPORTS ----------------- */
+
+%do year = &year_strt. %to &year_end. ;
+%let yr = %substr(&year.,3,2) ;
+
+* **** RA POP RELATED COUNT *** ;
+
+proc sql;
+create table &datsrc.&ver._ra_counts&yr. as
+select distinct input("&year.",best4.) as Year,
+				a.Count as UniqueIDs_Had_1_RA_DX,
+				b.Count as UniqueIDs_Had_2_RA_DX,
+				d.count	as UniqueIDs_Had_1_RA_NDC,
+				sum(c.count) as UniqueIDs_Had_1_RA_NDCorPX,
+				e.Unique_newID_1_Year,
+				f.Unique_newID_AllPre_Year
+	from &wrk..&datsrc.&ver._rafreq&yr._1st_ra_dx_date(where=(upcase(strip(put(contents,mis_n.)))='NONMISS'))	as a ,
+		 &wrk..&datsrc.&ver._rafreq&yr._2nd_ra_dx_date(where=(upcase(strip(put(contents,mis_n.)))='NONMISS'))	as b ,
+		 &wrk..&datsrc.&ver._rafreq&yr._2dx1rx(where=(upcase(strip(put(_1st_RA_NDC_Date,mis_n.))) ='NONMISS' or
+						  							  upcase(strip(put(_1st_RA_RXPX_Date,mis_n.)))='NONMISS'))	as c ,
+		 &wrk..&datsrc.&ver._rafreq&yr._1st_ra_ndc_dat(where=(upcase(strip(put(contents,mis_n.)))='NONMISS'))	as d ,
+		 &wrk..&datsrc.&ver._radx&yr.uniid_new1 	as e ,
+		 &wrk..&datsrc.&ver._radx&yr.uniid_newall 	as f
+		;
+quit;
+
+data &datsrc.&ver._ra_dx_rx_found&yr. ;
+set &wrk..&datsrc.&ver._rafreq&yr._1st_ra_dx_date
+	&wrk..&datsrc.&ver._rafreq&yr._2nd_ra_dx_date
+	&wrk..&datsrc.&ver._rafreq&yr._1st_ra_dx_spec
+	&wrk..&datsrc.&ver._rafreq&yr._1st_ra_ndc_dat
+	&wrk..&datsrc.&ver._rafreq&yr._1st_ra_rxpx_da
+;
+where strip(upcase(put(contents,mis_n.))) = 'NONMISS' ;
+run;
+
+%end;
+
+%mend;
+
+%macro combo_ra_pid_counts(VER);
+
+data &datsrc.&ver._ra_all_summary ;
+set &datsrc.&ver._ra_counts: ;
+run;
+
+%mend;
+
+
+%macro report_overall_ra(VER,YEAR_STRT,YEAR_END);
+
+proc report data = &datsrc.&ver._ra_all_summary ;
+columns year UniqueIDs_Had_1_RA_DX UniqueIDs_Had_2_RA_DX UniqueIDs_Had_1_RA_NDC UniqueIDs_Had_1_RA_NDCorPX Unique_NewID_1_Year Unique_NewID_AllPre_Year ;
+define year 						/ group 	'Year' 					width=4 ;
+define UniqueIDs_Had_1_RA_DX		/ display 'Unique PATIDs Had >=1 RA DXs'	width=15 format=comma15. ;
+define UniqueIDs_Had_2_RA_DX		/ display 'Unique PATIDs Had >=2 RA DXs'	width=15 format=comma15. ;
+define UniqueIDs_Had_1_RA_NDC		/ display 'Unique PATIDs Had >=1 RA NDCs'	width=15 format=comma15. ;
+define UniqueIDs_Had_1_RA_NDCorPX	/ display 'Unique PATIDs Had >=1 RA NDCs or Related PXs'					width=15 format=comma15. ;
+define Unique_NewID_1_Year			/ display 'Unique PATIDs Had >=1 RA DXs But Not Any In Previous 1 Year' 	width=15 format=comma15. ;
+define Unique_NewID_AllPre_Year		/ display 'Unique PATIDs Had >=1 RA DXs But Not Any In ALL Previous Years'	width=15 format=comma15. ;
+title "========= QC Standardized &DATSRC. Data Year &YEAR_STRT. - &YEAR_END. =========" ;
+title2 "Summary of ALL Years RA Related Population";
+run;
+title;title2;
+
+%mend;
+
+%macro report_by_year_ra(VER,YEAR);
+
+%let yr = %substr(&year.,3,2);
+
+proc report data= &datsrc.&ver._ra_dx_rx_found&yr. ;
+columns varname count percent ;
+define varname	/ group "Any RA Dx/Rx/Px" 	width=32 ;
+define count 	/ display "Frequency" 		width=15 	format=comma15. ;
+define percent	/ display "Percent" 		width=10 	format=6.2 ;
+title "========= QC RA DX/RX/PX/SPECIALTY From Standardized Data Year &year. =========";
+title2 "Dates Represent The Existance of DX/RX/PX/Rheumatologist_DX In Data";
+title3 "Percent Represents %of Records(Unique Dates) Had 1/2 RA DX/RX/PX/Specialist_DX Among Any RA Records";
+run;
+
+proc report data = &wrk..&datsrc.&ver._rafreq&yr._2dx1rx ;
+columns _1st_RA_DX_Date _2nd_RA_DX_Date _1st_RA_NDC_Date _1st_RA_RXPX_Date COUNT PERCENT ;
+define _1st_RA_DX_Date		/ display "Had >=1 RA Diagnosis From IP or Physician Visit" width = 10 format=mis_n. ;
+define _2nd_RA_DX_Date		/ display "Had >=2 RA Diagnosis From IP or Physician Visit" width = 10 format=mis_n. ;
+define _1st_RA_NDC_Date		/ display "Had >=1 RA Medicine NDC From RX File" 			width = 10 format=mis_n. ;
+define _1st_RA_RXPX_Date	/ display "Had >=1 RA Medicine PX From PX File" 			width = 10 format=mis_n. ;
+define count				/ display "Frequency" 	width = 15 format = comma15. ;
+define percent				/ display "Percent"		width = 10 format = 6.2 ;
+title "========= QC RA DX/RX/PX From Standardized Data Year &year. =========";
+title2 "RA=714.0,714.2,714.81;RX=Any Bio/NonBio DMARDs;PX=Medicine Procedure Codes.";
+run;
+title;
+
+%mend;
+
+
+
+/* ================================================================ */
+/*						INTEGRATE FINAL REPORTS						*/
+/* ================================================================ */
+
+/* --------------------- RUN FINAL REPORTS ------------------- */
+
+%macro final_reports_summary(ver,year_strt,year_end);
+
+options orientation=landscape ;
+
+ods rtf file="&outpath.\&factsfolder.\QC_STD_&ver._&datsrc. DX-PX-RX-RA-LAB Summary Among &YEAR_STRT.-&YEAR_END..rtf"
+		bodytitle startpage=no keepn notoc_data ;
+
+%report_overall(&ver.,DX,&year_strt.,&year_end.);
+
+%report_overall(&ver.,PX,&year_strt.,&year_end.);
+
+%report_overall(&ver.,RX,&year_strt.,&year_end.);
+
+%report_overall_RA(&ver.,&year_strt.,&year_end.);
+
+%report_overall(&ver.,LAB,&year_strt.,&year_end.);
+
+ods rtf close;
+
+%mend;
+
+%macro final_reports_by_year(ver,datyp,year_strt,year_end);
+
+%do year = &year_strt. %to &year_end. ;
+
+ods rtf file="&outpath.\&factsfolder.\QC_STD_&ver._&datsrc._&year._&datyp._Details.rtf"
+		bodytitle startpage=no keepn notoc_data ;
+
+%report_by_year(&ver.,&datyp.,&year.);
+
+ods rtf close ;
+
+%end;
+
+%mend;
+*%final_reports(V4,DX,2016,2016);
+
+%macro final_reports_RA_by_year(ver,year_strt,year_end);
+
+%do year = &year_strt. %to &year_end. ;
+
+ods rtf file="&outpath.\&factsfolder.\QC_STD_&ver._&datsrc._&year._RA_Details.rtf"
+		bodytitle startpage=no keepn notoc_data ;
+
+%report_by_year_ra(&ver.,&year.);
+
+ods rtf close ;
+
+%end;
+
+%mend;
+
+/* ======================================================================== */
+/*						RUN ABOVE QC PROCESS BY YEARS						*/
+/* ======================================================================== */
+
+
+%inc "M:\studies\MarketScan1\pgms\Shuo\20180710-QC Standardized Data.sas";
+
+/* ================================================================================ */
+/*								RUN QC DEMOGRAPHIC PART								*/
+/* ================================================================================ */proc contents data=_null_;run;
+
+%demo_contents(s_mks,demographic0616,demo0616,v4);
+
+%demo_freqs(s_mks,demographic0616,demo0616,v4);
+
+%cl_freqs(DEMO0616,V4,PID,PATID,$MIS_C.);
+%cl_freqs(DEMO0616,V4,DOB,BIRTH_DATE,MIS_N.);
+%cl_freqs(DEMO0616,V4,NBIRTH,N_BIRTH,BEST8.);
+%cl_freqs(DEMO0616,V4,SEX,SEX,$sex.);
+%cl_freqs(DEMO0616,V4,SEX_I,GENDER_IDENTITY,$gender_id.);
+%cl_freqs(DEMO0616,V4,SEX_O,SEXUAL_ORIENTATION,$sex_orien.);
+%cl_freqs(DEMO0616,V4,RACE,RACE,$race.);
+%cl_freqs(DEMO0616,V4,HISP,HISPANIC,$hispanic.);
+%cl_freqs(DEMO0616,V4,BIOFLAG,BIOBANK_FLAG,$10.);
+%cl_freqs(DEMO0616,V4,LANGUAGE,PAT_PREF_LANGUAGE_SPOKEN,$10.);
+
+%demo_means(DEMOGRAPHIC0616,DEMO0616,V4,BIRTH_DATE);
+%demo_means(DEMOGRAPHIC0616,DEMO0616,V4,N_BIRTH);
+
+%combo_demo_freq_means(v4,demo0616);
+
+%final_report_demo(V4,DEMO0616,2006,2016);
+
+
+/* ================================================================================ */
+/*								RUN QC ENROLLMENT PART								*/
+/* ================================================================================ */proc contents data=_null_;run;
+
+%enrl_id_counts(s_mks,enrollment0616,v4,enrl0616);
+
+%enrl_id_year_counts(s_mks,v4,enrollment0616,enrl0616,2006,2016) ;
+
+%final_report_enrl(V4,DATYP,2006,2016);
+
+
+/* ================================================================================ */
+/*							RUN QC DX/PX/RX/LAB/RA BY YEARS							*/
+/* ================================================================================ */proc contents data=_null_;run;
+
+%macro run_all_qc_by_year(curYear,lastYear);
+
+/* ------------------------------------- DX PART ---------------------------------- */
+
+%pulUniPID(t_mks,diagnosis,dx,v4,&curYear.,&curYear.);			*<--- this step can run year by year ;
+
+%uniid_count(t_mks,diagnosis,dx,v4,&curYear.,&curYear.);		*<--- this step can run year by year ;
+
+%qc_var_freq_mean(T_MKS,DIAGNOSIS,DX,V4,&curYear.,&curYear.);	*<--- this step can run year by year ;
+
+%combo_freqs(V4,DX,&curYear.) ;									*<--- can do BY YEAR;	
+
+%newid_count(v4,dx,&curYear.,&lastYear.);						*<--- this and folowing steps better run CUMU years, like 2015-2016 after new years added;
+
+%combo_pid_counts(V4,DX,&curYear.,&lastYear.);
+
+
+
+/* --------------------------------------- PX PART --------------------------------- */
+
+%pulUniPID(s_mks,procedures,px,v4,&curYear.,&curYear.);			*<--- this step can run year by year ;
+
+%uniid_count(s_mks,procedures,px,v4,&curYear.,&curYear.); 		*<--- this step can run year by year ;
+
+%qc_var_freq_mean(S_MKS,PROCEDURES,PX,V4,&curYear.,&curYear.);	*<--- this step can run year by year ;
+
+%combo_freqs(V4,PX,&curYear.) ;									*<--- can do BY YEAR;	
+
+%newid_count(v4,px,&curYear.,&lastYear.);						*<--- this and folowing steps better run CUMU years, like 2015-2016 after new years added;
+
+%combo_pid_counts(V4,PX,&curYear.,&lastYear.);
+
+
+
+/* --------------------------------------- RX PART -------------------------------- */
+
+%pulUniPID(s_mks,DISPENSING,RX,v4,&curYear.,&curYear.);			*<--- this step can run year by year ;
+
+%uniid_count(s_mks,DISPENSING,RX,v4,&curYear.,&curYear.); 		*<--- this step can run year by year ;
+
+%qc_var_freq_mean(S_MKS,DISPENSING,RX,V4,&curYear.,&curYear.);	*<--- this step can run year by year ;
+
+%combo_freqs(V4,RX,&curYear.) ;									*<--- can do BY YEAR;	
+
+%newid_count(v4,RX,&curYear.,&lastYear.);						*<--- this and folowing steps better run CUMU years, like 2015-2016 after new years added;
+
+%combo_pid_counts(V4,RX,&curYear.,&lastYear.);
+
+
+
+/* ----------- LAB PART ----------- */
+
+%pulUniPID(s_mks,LAB_RESULT_CM,LAB,v4,&curYear.,&curYear.);		*<--- this step can run year by year ;
+
+%uniid_count(s_mks,LAB_RESULT_CM,LAB,v4,&curYear.,&curYear.); 	*<--- this step can run year by year ;
+
+%qc_var_freq_mean(S_MKS,LAB_RESULT_CM,LAB,V4,&curYear.,&curYear.);*<--- this step can run year by year ;
+
+%combo_freqs(V4,LAB,&curYear.) ;								*<--- can do BY YEAR;	
+
+%newid_count(v4,LAB,&curYear.,&lastYear.);						*<--- this and folowing steps better run CUMU years, like 2015-2016 after new years added;
+
+%combo_pid_counts(V4,LAB,&curYear.,&lastYear.);
+
+
+
+/* ----------- RA PART ----------- */
+
+%RA_DXS(T_MKS,DIAGNOSIS,V4,&curYear.,&curYear.,("300"));
+
+%RA_RXS_NDC(S_MKS,DISPENSING,V4,NDC,&curYear.,&curYear.);
+
+%RA_PXS_NDC(S_MKS,PROCEDURES,V4,PX,&curYear.,&curYear.);
+
+%ra_dxrxpx(V4,&curYear.,&curYear.);
+
+%append_ra_dx_id(v4,&curYear.,&curYear.);
+
+%newid_count(v4,RADX,&curYear.,&lastYear.);
+
+%prep_RA_report(V4,&curYear.,&lastYear.) ;
+
+%combo_ra_pid_counts(V4);
+
+%mend;
+%run_all_qc_by_year(2016,2016);
+%run_all_qc_by_year(2015,2016);
+%run_all_qc_by_year(2014,2016);
+%run_all_qc_by_year(2013,2016);
+%run_all_qc_by_year(2012,2016);
+%run_all_qc_by_year(2011,2016);
+%run_all_qc_by_year(2010,2016);
+%run_all_qc_by_year(2009,2016);
+%run_all_qc_by_year(2008,2016);
+%run_all_qc_by_year(2007,2016);
+
+
+/* ========== AFTER RUNNING ABOVE, RUN REPORTS ON MULTIPLE YEARS ========== */
+
+
+
+%final_reports_summary(V4,2010,2016);
+
+
+%macro run_final_reports(VER,YEAR_STRT,YEAR_END);
+
+%final_reports_by_year(&VER.,DX,&YEAR_STRT.,&YEAR_END.);
+
+%final_reports_by_year(&VER.,PX,&YEAR_STRT.,&YEAR_END.);
+
+*%final_reports_by_year(&VER.,RX,&YEAR_STRT.,&YEAR_END.);
+
+%final_reports_by_year(&VER.,LAB,&YEAR_STRT.,&YEAR_END.);
+
+
+%final_reports_RA_by_year(&VER.,&YEAR_STRT.,&YEAR_END.);
+
+%mend;
+%run_final_reports(V4,2010,2016);
+
+
+
