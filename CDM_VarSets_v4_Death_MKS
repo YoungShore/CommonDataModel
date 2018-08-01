@@ -1,0 +1,52 @@
+/* Created by Shuo Yang from Univ. of Alabama at Birmingham */
+/* Last Updated on 8/1/2018                                 */
+/* Any Question Contact: shuoyang@uabmc.edu                 */
+
+
+/* =========================== Death Variables Settings ====================== */
+
+%let _patID					= PUT(ENROLID,20.) ;
+%let _deathStatus			= COALESCEC(DSTATUS,put(DRG,z3.)) ;		*<-- since DRG can have 20,40,41,42 values too, which mess up with mks death_status, so use z3. format to add leading 0s to avoid it;
+%let _deathDate				= COALESCE(DISDATE,TSVCDAT) ;			*<-- diff source named differently, so defined it at macro step ;
+%let _deathDateImpute		= "N" ;
+%let _deathSource			= "L" ;
+%let _deathMatchConfidence	= "NI" ;
+
+* ---- death cause data ---- ;
+
+%let _deathCause			= PDX ;
+%let _deathCauseCode		= DXVER ;
+%let _deathCauseType		= "UN" ;
+%let _deathCauseSource		= "L" ;
+%let _deathCauseConfidence	= "NI" ;
+
+
+/* =========================== Death Variables Length & Label Settings ========================= */
+
+%macro length_label ;
+
+	length 	PATID 					$20
+			DEATH_DATE 				4
+			DEATH_DATE_IMPUTE		$2
+			DEATH_SOURCE			$2
+			DEATH_MATCH_CONFIDENCE	$2
+
+			DEATH_CAUSE				$8
+			DEATH_CAUSE_CODE		$2
+			DEATH_CAUSE_TYPE		$2
+			DEATH_CAUSE_SOURCE		$2
+			DEATH_CAUSE_CONFIDENCE	$2
+			;
+	label 	PATID					= "Unique Patient Identification Number"
+	      	DEATH_DATE				= "Date of Death"
+			DEATH_DATE_IMPUTE		= "Which Part of DEATH_DATE is Imputed"
+			DEATH_SOURCE			= "Death Source"
+			DEATH_MATCH_CONFIDENCE	= "Confidence of Probabilistic Matching Strategy if Applied"
+
+			DEATH_CAUSE				= "Cause of Death"
+			DEATH_CAUSE_CODE		= "Cause of Death Code Type (DRG for MKS)"
+			DEATH_CAUSE_TYPE		= "Cause of Death Type"
+			DEATH_CAUSE_SOURCE		= "Source of Cause of Death Info"
+			DEATH_CAUSE_CONFIDENCE	= "Confidence of Accurary of the Cause of Death"
+			;
+%mend;
