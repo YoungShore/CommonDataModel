@@ -1,0 +1,122 @@
+
+/* ============================== VARIABLE PICKING ============================ */
+
+%let _patID					= patientUID ;
+%let _prescribingID			= patientMedicationUID ;
+%let _encounterID			= _NA_ ;
+%let _rxProviderID			= coalescec(npi,serviceProviderUID) ; 						/*<-join 'provider' data to 'patientMedication' data by 'serviceProviderUID';*/
+
+%let _rxOrderDate			= input(scan(administeredEffectiveDate,1,' '),mmddyy10.) ;
+%let _rxOrderTime			= input(scan(administeredEffectiveDate,2,' '),time8.) ;
+%let _rxStartDate			= input(scan(startDate,1,' '),mmddyy10.) ;
+%let _rxEndDate				= input(scan(stopDate,1,' '),mmddyy10.) ;
+
+%let _rxDoseOrdered			= _NA_ ;
+%let _rxDoseOrderedUnit		= upcase(doseQuantityUnitText) ;
+%let _rxDoseForm			= upcase(productForm) ;
+%let _rxQuantity			= dispensingDoseQuanity ;
+%let _rxRefills				= refillQuantity ;
+%let _rxDaysSupply			= input(substr(strip(stopDate),1,10),mmddyy10.)-input(substr(strip(startDate),1,10),mmddyy10.) ;
+%let _rxFrequency			= coalescec(dispensingDoseQuanity,medicationFrequencyUID) ;
+
+%let _rxPrnFlag				= _NA_ ;
+%let _rxRoute				= upcase(route) ;
+%let _rxBasis				= _NA_ ;
+%let _rxnormCui				= _NA_ ;														/*<- used to be 'medicationCode', but think better leave it blank for cleaning */
+%let _rxSource				= "OD" ;
+%let _rxDispenseAsWritten	= prescribeElectronically ;
+%let _rxCode				= medicationCode ;											/*<- created by Shuo for better standardization */
+%let _rxCodeType			= drugSource ;													/*<- created by Shuo for better standardization */
+%let _rxStrength			= input(scan(doseQuantity,1,' '),best12.) ;
+
+%let _rawRxMedName			= coalescec(medicationGenericName,Name) ; 					/*<--by QC, 'name' has the least missing;*/
+%let _rawRxFrequency		= coalescec(dispensingDoseQuanity,medicationFrequencyUID) ;
+%let _rawRxnormCui			= medicationCode ;
+%let _rawRxQuantity			= dispensingDoseQuanity ;
+%let _rawRxNDC				= medicationCode ;
+%let _rawRxDoseOrdered		= doseQuantity ;
+%let _rawRxDoseOrderedUnit	= doseQuantityUnitText ;
+%let _rawRxRoute			= route ;
+%let _rawRxRefills			= refillQuantity ;
+%let _rawRxStrength			= doseQuantity;
+
+/* =========================== VARIABLE LENGTH SETTINGS ========================= */
+
+%macro lengthSettings;
+length 	_patID				$36 
+		_prescribingID		$36
+		_encounterID		$36
+		_rxProviderID		$36
+
+		_rxOrderDate		4
+		_rxOrderTime		8
+		_rxStartDate		4
+		_rxEndDate			4
+
+		_rxDoseOrdered		8
+		_rxDoseOrderedUnit	$20
+		_rxDoseForm			$20
+		_rxQuantity			8
+		_rxRefills			8
+		_rxDaysSupply		8
+		_rxFrequency		$2
+
+		_rxPrnFlag			$1
+		_rxRoute			$20
+		_rxBasis			$2
+		_rxnormCui			$8
+		_rxSource			$2
+		_rxDispenseAsWritten	$2
+		_rxCode				$20
+		_rxCodeType			$10
+
+		_rawRxMedName		$100
+		_rawRxFrequency		$100
+		_rawRxnormCui		$20
+		_rawRxQuantity		$100
+		_rawRxNDC			$20
+		_rawRxDoseOrdered	$100
+		_rawRxDoseOrderedUnit	$100
+		_rawRxRoute			$100
+		_rawRxRefills		$20
+;
+%mend;
+
+/* ================================ VARIABLE RENAME SETTINGS ============================== */
+
+%macro final_rename;
+rename	_patID 				= PATID
+		_prescribingID		= PrescribingID
+		_encounterID		= EncounterID
+		_rxProviderID		= RX_ProviderID
+		_rxOrderDate		= RX_Order_Date
+		_rxOrderTime		= RX_Order_Time
+		_rxStartDate		= RX_Start_Date
+		_rxEndDate			= RX_End_Date
+		_rxDoseOrder		= RX_Dose_Ordered
+		_rxDoseOrderedUnit	= RX_Dose_Ordered_Unit
+		_rxDoseForm			= RX_Dose_Form
+		_rxQuantity			= RX_Quantity
+		_rxRefills			= RX_Refills
+		_rxDaysSupply		= RX_Days_Supply
+		_rxFrequency		= RX_Frequency
+		_rxPrnFlag			= RX_PRN_Flag
+		_rxRoute			= RX_Route
+		_rxBasis			= RX_Basis
+		_rxnormCUI			= RXNORM_CUI
+		_rxSource			= RX_Source
+		_rxDispenseAsWritten= RX_Dispense_As_Written
+		_rxCode				= RX_Code
+		_rxCodeType			= RX_Code_Type
+
+		_rawRxMedName		= Raw_RX_Med_Name
+		_rawRxFrequency		= Raw_Rx_Frequency
+		_rawRxnormCui		= Raw_RxNorm_CUI
+		_rawRxQuantity		= Raw_Rx_Quantity
+		_rawRxNDC			= Raw_Rx_NDC
+		_rawRxDoseOrdered	= Raw_Rx_Dose_Ordered
+		_rawRxDoseOrderedUnit	= Raw_Rx_Dose_Ordered_Unit
+		_rawRxRoute				= Raw_Rx_Route
+		_rawRxRefills			= Raw_Rx_Refills
+;
+%mend;
