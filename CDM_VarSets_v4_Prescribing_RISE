@@ -42,7 +42,7 @@
 
 /* =========================== VARIABLE LENGTH SETTINGS ========================= */
 
-%macro lengthSettings;
+%macro prescribLengths;
 length 	_patID				$36 
 		_prescribingID		$36
 		_encounterID		$36
@@ -82,9 +82,51 @@ length 	_patID				$36
 ;
 %mend;
 
+/* ================================ VARIABLE LABEL SETTINGS ============================= */
+
+%macro prescribLabels;
+label 	_patID					= "Unique Patient Identification Number" 
+		_prescribingID			= "Unique Prescribing Record ID"
+		_encounterID			= "Encounter ID"
+		_rxProviderID			= "Provider code for the provider who prescribed the medication"
+
+		_rxOrderDate			= "Order date of the prescription by the provider"
+		_rxOrderTime			= "Order time of the prescription by the provider"
+		_rxStartDate			= "Start date of order"
+		_rxEndDate				= "End date of order"
+
+		_rxDoseOrdered			= "Dose of Given Medication as Ordered by Provider"
+		_rxDoseOrderedUnit		= "Unit of Measure Associated with Dose of Given Medication as Ordered by Provider"
+		_rxDoseForm				= "RxNorm Dose Form"
+		_rxQuantity				= "Quantity ordered"
+		_rxRefills				= "Number of refills ordered not including the original prescription"
+		_rxDaysSupply			= "Number of days supply ordered as Specified by Prescription"
+		_rxFrequency			= "Specified frequency of medication"
+
+		_rxPrnFlag				= "Flag to Indicate All or Part of Medicattion Frequency Instructions Includes 'as needed'"
+		_rxRoute				= "Route of Medication Delivery"
+		_rxBasis				= "Basis of the medication order"
+		_rxnormCui				= "RxNorm concept identifier (CUI) at the highest possible specificity"
+		_rxSource				= "Source of Prescribing Information"
+		_rxDispenseAsWritten	= "Flag to Indicate Whether Provider Indicated the Medication Order was Dispensed as Written"
+		_rxCode					= "Any Systematic Code for Prescribed Medicine"
+		_rxCodeType				= "Type of Systematic Code for Prescribed Medicine"
+
+		_rawRxMedName			= "Raw Records of Medication Name"
+		_rawRxFrequency			= "Raw Records of Medication Frequency"
+		_rawRxnormCui			= "Raw Records of RxNorm RXCUI Codes"
+		_rawRxQuantity			= "Raw Records of Medication Quantity"
+		_rawRxNDC				= "Raw Records of NDC Codes"
+		_rawRxDoseOrdered		= "Raw Records of Medication Ordered Dose"
+		_rawRxDoseOrderedUnit	= "Raw Records of Medication Dose Unit"
+		_rawRxRoute				= "Raw Records of Medication Route"
+		_rawRxRefills			= "Raw Records of Medication Refills"
+;
+%mend;
+
 /* ================================ VARIABLE RENAME SETTINGS ============================== */
 
-%macro final_rename;
+%macro prescribRenames;
 rename	_patID 				= PATID
 		_prescribingID		= PrescribingID
 		_encounterID		= EncounterID
