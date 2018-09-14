@@ -1,7 +1,6 @@
-
-/* ============================================================================ */
-/*				QC ALL TABLES & VARS				*/
-/* ============================================================================ */
+/* ================================================================================ */
+/*								QC ALL TABLES & VARS								*/
+/* ================================================================================ */
 
 
 proc format;
@@ -86,7 +85,7 @@ run;
 
 			VARNAME = "&numVar." ;
 
-				 if find(varname,'date','i') then output &wrk..&dstout.meand&seq._&numVarSrt. ;
+				 if find(varname,'date','i') or upcase(varName) in ('DOB') then output &wrk..&dstout.meand&seq._&numVarSrt. ;
 			else if find(varname,'time','i') then output &wrk..&dstout.meant&seq._&numVarSrt. ;
 			else 								  output &wrk..&dstout.meann&seq._&numVarSrt. ;
 
@@ -217,7 +216,8 @@ define description	/ display 	'Description'	width=100 ;
 define count	/ display 	'Frequency'			width=20	format=comma15. ;
 define percent	/ display 	'Percent'			width=10	format=6.2 ;
 title2 "Character Variables Frequencies" ;
-run;
+title3 "Categories Greater Than 20 Used MISS/NONMISS Format To Reduce Table Length";
+run;title3;
 
 
 proc report data = &wrk..all&dstout._meands&seq. ;
@@ -262,7 +262,7 @@ define max_		/ display	'Maximum Value'			width=10 ;
 title2 "Times Variables Distribution" ;
 run;
 
-title;title2;
+title;title2;footnote;
 
 %mend;
 
@@ -281,9 +281,39 @@ ods rtf close;
 %mend;
 *%output_reports(RAW,_01_DEMO,DEMO,);
 
+* ==================== _01_DEMO ==================== ;
 
+proc datasets lib=&wrk. nolist ;
+	delete DEMO: ;
+quit;run;
+
+%uidobs_non_indxd(arbda,_01_demo,demo,,accNum);
+%combo_seqs(demo,uidobs,);
+%allmeans(arbda,_01_demo,demo,);
+%allfreqs(arbda,_01_demo,demo,);
+%output_reports(RAW,_01_DEMO,DEMO,);
+
+
+
+* ==================== _02_LABS ==================== ;
+
+proc datasets lib=&wrk. nolist ;
+	delete LABS: ;
+quit;run;
+
+%uidobs_non_indxd(arbda,_02_labs,LABS,,accNum);
+%combo_seqs(LABS,UIDOBS,);
+%allMeans(arbda,_02_labs,LABS,);
+%allFreqs(arbda,_02_labs,LABS,);
+%output_reports(RAW,_02_LABS,LABS,);
+
+* ==================== _03_RX ==================== ;
 
 %macro RUN_ALL_QC(LIB,DSTIN,DSTOUT,SEQ,UID,RAWSTD);
+
+proc datasets lib=&wrk. nolist ;
+	delete &dstout.: ;
+quit;run;
 
 %uidobs_non_indxd(&LIB.,&DSTIN.,&DSTOUT.,&SEQ.,&UID.);
 %combo_seqs(&DSTOUT.,UIDOBS,);
@@ -296,4 +326,3 @@ ods rtf close;
 
 %mend;
 %RUN_ALL_QC(ARBDA,_03_RX,RX, ,ACCNUM,RAW)
-
