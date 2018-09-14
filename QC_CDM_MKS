@@ -389,7 +389,7 @@ quit;
 	run;
 
 	data &datsrc.&ver._&datyp.means_numall ;
-	set &wrk..&datsrc.&ver._&datyp.meann_:n=N_ nmiss=NMISS_ mean=MEAN_ std=STD_ min=MIN_ p1=P1_ p5=P5_ p10=P10_ q1=Q1_ median=MEDIAN_ q3=Q3_ p90=P90_ p95=P95_ p99=P99_ max=MAX_)) ;
+	set &wrk..&datsrc.&ver._&datyp.meann_:(rename=(n=N_ nmiss=NMISS_ mean=MEAN_ std=STD_ min=MIN_ p1=P1_ p5=P5_ p10=P10_ q1=Q1_ median=MEDIAN_ q3=Q3_ p90=P90_ p95=P95_ p99=P99_ max=MAX_)) ;
 	format mean_ -- max_ best12. ;
 	run;
 
