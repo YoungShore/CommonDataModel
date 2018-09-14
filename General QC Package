@@ -1,622 +1,8 @@
 
-libname arbda "H:\studies\UR\data\Data rcvd 2018-09-11\ARBDA" ;
-
-%let raw = arbda ;
-%let wrk = work ;
-
-%let outpath	= W:\Users\syang\Projects\UnitedRheum\ARBDA\SAS Results;
-%let outfolder	= 20180912-Read-In & Explore Raw;
-
-
-%macro import(dstin,dstout);
-proc import out=&wrk..&dstout. 
-			datafile="H:\studies\UR\data\Data rcvd 2018-09-11\ARBDA\&dstin..xlsx"
-			dbms=xlsx replace;
-run;
-proc datasets lib=&wrk. memtype=data;
-	modify &dstout. ;
-		attrib _all_ label='' ;
-quit;run;
-%mend;
-%import(HZN-01_Demographics,_01_demo);
-%import(HZN-02_Labs,_02_labs);
-%import(HZN-03_RX,_03_rx);
-%import(HZN-04_Vitals,_04_vitals);
-%import(HZN-06_Prob_List,_06_prob_List);
-%import(HZN-07_PM_Hx,_07_pm_hx);
-%import(HZN-08_OV_HX,_08_ov_hx);
-%import(HZN-09_HZN_Taper_Button,_09_taper_Button);
-%import(HZN-09b_Taper_ALL,_09b_taper_All);
-%import(HZN-10_bDMARD_HX,_10_bdmard_hx);
-%import(HZN-11_Tobacco_Use,_11_tobacco_Use);
-%import(HZN-12_RA_Disease_Assessment,_12_ra_disease_assess);
-%import(HZN-13_Alcohol,_13_alcohol);
-%import(HZN-14_Horizon_Patient_List,_14_horiz_pat_list);
-
-
-data &raw.._01_demo ;
-set &wrk.._01_demo(rename = (	acct	= AccNum
-								Name	= PatName
-								DOB		= DOB_ 
-								j		= DxCode
-							)
-					);
-
-DOB					= input(dob_,mmddyy10.) ;
-RxDxDate			= input(var9,mmddyy10.) ;
-
-if strip(accNum) ^= '' ;
-
-format dob rxDxDate mmddyy10. ;
-
-drop dob_ var9 ;
-
-run;*got 9670 from 9671;
-
-data &raw.._02_labs ;
-set	 &wrk.._02_labs	(rename = (	acct_ 			= AccNum
-								pt__name		= PatName
-								DOB				= _DOB
-								prim_ins__		= PrimIns 
-								prim_ins_name	= PrimInsNm
-								primary_id__	= PrimInsID 
-								RA_Dx_			= _RA_DX_Date
-								h				= DxCode 
-
-								genMed_lab_results	= _GenMed_Lab_Results_Date
-								j				= GenMed_Lab
-								k				= GenMed_LOINC 
-								l				= GenMed_Desc
-								m				= GenMed_Result
-								n				= GenMed_Unit 
-								o				= GenMed_RefRange
-
-								mtx_pg_level	= _MTX_PG_Level_Date
-								q				= MTX_PG_Lab
-								r				= MTX_PG_LOINC
-								s				= MTX_PG_Desc
-								t				= MTX_PG_Result
-								u				= MTX_PG_Unit
-								v				= MTX_PG_RefRange 
-
-								vectra_score	= _Vecttra_Score_Date
-								x				= Vectra_Score_Lab
-								y				= Vectra_Score_LOINC
-								z				= Vectra_Score_Desc
-								aa				= Vectra_Score_Result
-								ab				= Vectra_Score_Unit
-								ac				= Vectra_Score_RefRange
-
-								vectra_level	= _Vectra_Level_Date
-								ae				= Vectra_Level_Lab
-								af				= Vectra_Level_LOINC
-								ag				= Vectra_Level_Desc 
-								ah				= Vectra_Level_Result
-								ai				= Vectra_Level_Unit
-								aj				= Vectra_Level_RefRange 
-
-								vectra_score__p	= _Vectra_Score_P_Date
-								al				= RVWD_CP
-
-								AM				= Vectra_Score_P_Result
-								vectra_level__p	= Vectra_Level_P_Result
-
-								crp_result		= _CRP_Result_Date
-								ap				= CRP_Lab
-								aq				= CRP_LOINC
-								AR				= CRP_Desc
-								as				= CRP_Result
-								at				= CRP_Unit
-								au				= CRP_RefRange
-
-								CRP_Result__b	= _CRP_Result_B_Date
-								aw				= CRP_Lab_B
-								AX				= CRP_Lab_LOINC_B
-								AY				= CRP_Lab_Desc_B
-								az				= CRP_Lab_Result_B
-								BA				= CRP_Unit_B
-								bb				= CRP_RefRange_B
-
-								Sed_Rate		= _ESR_Result_Date
-								bd				= ESR_Lab
-								be				= ESR_LOINC
-								bf				= ESR_Desc
-								bg				= ESR_Result
-								bh				= ESR_Unit
-								bi				= ESR_RefRange
-
-								Anti_CCP_AB		= _AntiCCP_Result_Date
-								bk				= AntiCCP_Lab
-								bl				= AntiCCP_LOINC
-								BM				= AntiCCP_Desc
-								bn				= AntiCCP_Result
-								bo				= AntiCCP_Unit
-								bp				= AntiCCP_RefRange
-
-								RA_Factor		= _RF_Result_Date
-								br				= RF_Lab
-								bs				= RF_LOINC
-								BT				= RF_Desc
-								bu				= RF_Result
-								bv				= RF_Unit
-								bw				= RF_RefRange
-								)
-							);
-
-DOB						= input(_dob,mmddyy10.) ;
-RA_Dx_Date				= input(_RA_DX_Date,mmddyy10.) ;
-GenMed_LabResult_Date	= input(_genmed_lab_results_date,mmddyy10.) ;
-MTX_PGLevel_Date		= input(_MTX_PG_Level_Date,mmddyy10.) ;
-Vectra_Score_Date		= input(_vectra_score_Date,mmddyy10.) ;
-Vectra_Level_Date		= input(_vectra_level_Date,mmddyy10.) ;
-Vectra_Score_P_Date		= input(_vectra_score_p_Date,mmddyy10.) ;
-CRP_Result_Date			= input(_CRP_Result_Date,mmddyy10.) ;
-CRP_Result_B_Date		= input(_CRP_Result_B_Date,mmddyy10.) ;
-ESR_Result_Date			= input(_ESR_Result_Date,mmddyy10.) ;
-AntiCCP_Result_Date		= input(_antiCCP_Result_Date,mmddyy10.) ;
-RF_Result_Date			= input(_RF_Result_Date,mmddyy10.) ;
-
-if strip(accNum) ^= '' and strip(PrimInsID) ^= '';
-
-format 	dob 	RA_Dx_Date 
-		GenMed_LabResult_Date 	MTX_PGLevel_Date 
-		Vectra_Score_Date 		Vectra_Level_Date 	Vectra_Score_P_Date
-		CRP_Result_Date 		CRP_Result_B_Date 
-		ESR_Result_Date			AntiCCP_Result_Date	RF_Result_Date
-		mmddyy10. ;
-
-drop _: ;
-
-run;*got 14349 from 14351;
-
-data &raw.._03_rx ;
-set	 &wrk.._03_rx (rename = (	acct_ 			= AccNum
-								pt__name		= PatName
-								DOB				= _DOB
-								prim_ins__		= PrimIns 
-								prim_ins_name	= PrimInsNm
-								primary_id__	= PrimInsID 
-								current_rx_list	= Current_RX_List_Doctor_Num 
-								h				= _Date 
-								i				= Desc
-								j				= NDC
-								K				= Strength
-								l				= SIG
-								M				= Form
-								n				= Route
-								o				= Quantity
-								p				= Refills
-								q				= Discontinued
-								r				= DC_reason
-								steroids__last	= _Steroids_Last_Date
-								T				= Steroids_Last_Desc
-								u				= Steroids_Last_Strength
-								steroids__last_inj	= Steroids_Last_Inj
-								historical_bDmard	= HX_bDMARD_Desc
-								x					= HX_bDMARD_Strength
-								y					= HX_bDMARD_SIG
-								inj_imm				= _Inj_IMM_Date
-								aa					= Inj_IMM_Code
-								ab					= Inj_IMM_Desc
-								ra_dx_				= _RA_DX_Date 
-								ad					= DxCode
-								)
-							);
-
-DOB					= input(_dob,mmddyy10.) ;
-Date				= input(_date,mmddyy10.) ;
-Steroids_Last_Date	= input(_Steroids_Last_Date,mmddyy10.) ;
-Inj_IMM_Date		= input(_Inj_IMM_Date,mmddyy10.) ;
-RA_DX_Date			= input(_RA_DX_Date,mmddyy10.) ;
-
-if strip(accNum) ^= '' ;
-
-format DOB Date Steroids_Last_Date Inj_IMM_Date RA_DX_Date mmddyy10. ;
-
-drop _: ;
-
-run;*got 12269 from 12270 ;
-
-data &raw.._04_vitals ;
-set	 &wrk.._04_vitals (rename= (acct_ 			= AccNum
-								pt__name		= PatName
-								DOB				= _DOB
-								prim_ins__		= PrimIns 
-								prim_ins_name	= PrimInsNm
-								primary_id__	= PrimInsID 
-								bmi				= _BMI_Date
-								h				= BMI_Vital
-								ra_dx_			= _RA_DX_Date 
-								j				= DxCode
-								)
-						);
-
-DOB			= input(_dob,mmddyy10.) ;
-BMI_Date	= input(_bmi_date,mmddyy10.) ;
-RA_DX_Date	= input(_ra_dx_date,mmddyy10.) ;
-
-if strip(accNum) ^= '' ;
-
-format dob bmi_date ra_dx_date mmddyy10.  ;
-drop _: ;
-
-run;*got 10109 from 10110;
-
-data &raw.._06_prob_list ;
-set	 &wrk.._06_prob_list (rename= (	acct_ 			= AccNum
-									pt__name		= PatName
-									DOB				= _DOB
-									prim_ins__		= PrimIns 
-									prim_ins_name	= PrimInsNm
-									primary_id__	= PrimInsID 
-									problem_list	= _ProbOnset_Date
-									h				= ProbOnset_Code
-									i				= ProbOnset_Desc
-									j				= ProbOnset_Doctor_Num
-									ra_dx_			= _RA_DX_Date
-									l				= DxCode
-								)
-							);
-DOB				= input(_dob,mmddyy10.) ;
-ProbOnset_Date	= input(_ProbOnset_Date,mmddyy10.) ;
-RA_DX_Date		= input(_RA_DX_Date,mmddyy10.) ;
-
-if strip(accNum) ^= '' ;
-
-format dob probOnset_Date ra_dx_date mmddyy10. ;
-
-drop _: ;
-
-run;*got 9817 from 9818;
-
-data &raw.._07_pm_hx ;
-set	 &wrk.._07_pm_hx (rename= ( acct_ 			= AccNum
-								pt__name		= PatName
-								DOB				= _DOB
-								prim_ins__		= PrimIns 
-								prim_ins_name	= PrimInsNm
-								primary_id__	= PrimInsID 
-								pmhx			= _PMHx_Date
-								h				= PMHx_Desc
-								i				= PMHx_Status
-								ra_dx_			= _RA_Dx_Date
-								k				= DxCode
-							)
-					);
-
-if strip(accNum) ^= '' ;
-
-DOB				= input(_dob,mmddyy10.) ;
-PMHx_Date		= input(_PMHx_Date,mmddyy10.) ;
-RA_Dx_Date		= input(_RA_Dx_Date,mmddyy10.) ;
-
-format dob pmhx_date ra_dx_date mmddyy10. ;
-
-drop _: ;
-
-run ;*got 11194 from 11195;
-
-data &raw.._08_ov_hx ;
-set	 &wrk.._08_ov_hx (rename= ( acct_ 			= AccNum
-								pt__name		= PatName
-								DOB				= _DOB
-								prim_ins__		= PrimIns 
-								prim_ins_name	= PrimInsNm
-								primary_id__	= PrimInsID 
-								ov_history		= _OV_Hx_Appt_Date
-								h				= OV_Hx_Doctor
-								i				= OV_Hx_NPI
-								j				= OV_Hx_Doctor_Num
-								k				= OV_Hx_Status
-								l				= OV_Hx_Type
-								m				= OV_Hx_Location
-								ra_dx			= _RA_DX_Date
-								o				= DxCode
-							)
-						);
-if strip(accNum) ^= '' ;
-
-DOB				= input(_dob,mmddyy10.) ;
-OV_Hx_Appt_Date	= input(_OV_Hx_Appt_Date,mmddyy10.) ;
-RA_DX_Date		= input(_RA_DX_Date,mmddyy10.) ;
-
-format dob OV_Hx_Appt_Date RA_DX_Date mmddyy10. ;
-
-drop _: ;
-
-run;*got 10679 from 10680;
-
-data &raw.._09b_taper_all ;
-set	 &wrk.._09b_taper_all (rename= (acct_ 						= AccNum
-									pt__name					= PatName
-									DOB							= _DOB
-									prim_ins__					= PrimIns 
-									prim_ins_name				= PrimInsNm
-									primary_id__				= PrimInsID 
-									sec_ins__					= Sec_Ins_Num
-									sec_ins_name				= Sec_Ins_Name
-									secondary_id__				= Secondary_ID_NUM
-									horizon_taper_button_result	= _TaperButtonResult_DocumentDate
-									k							= TaperButton_ContentOfComponent
-									compliance__y				= Compliance_Y
-									compliance__n				= Compliance_N
-									flare__y					= Flare_Y
-									flare__n					= Flare_N
-								)
-							);
-if strip(accNum) ^= '' ;
-
-DOB								= input(_dob,mmddyy10.) ;
-TaperButtonResult_DocumentDate	= input(_TaperButtonResult_DocumentDate,mmddyy10.) ;
-
-format dob TaperButtonResult_DocumentDate mmddyy10. ;
-
-drop _: ;
-
-run;*got 28 from 29;
-
-data &raw.._09_taper_button ;
-set	 &wrk.._09_taper_button (rename= (	acct_ 						= AccNum
-									pt__name					= PatName
-									DOB							= _DOB
-									prim_ins__					= PrimIns 
-									prim_ins_name				= PrimInsNm
-									primary_id__				= PrimInsID 
-									horizon_taper_button_result	= _TaperButtonResult_DocumentDate
-									h							= TaperButton_ContentOfComponent
-									compliance__y				= Compliance_Y
-									compliance__n				= Compliance_N
-									flare__y					= Flare_Y
-									flare__n					= Flare_N
-								)
-							);
-if strip(accNum) ^= '' ;
-
-DOB								= input(_dob,mmddyy10.) ;
-TaperButtonResult_DocumentDate	= input(_TaperButtonResult_DocumentDate,mmddyy10.) ;
-
-format dob TaperButtonResult_DocumentDate mmddyy10. ;
-
-drop _: ;
-
-run;*got 25 from 26;
-
-data &raw.._10_bdmard_hx ;
-set  &wrk.._10_bdmard_hx(rename = (	acct_		= AccNum
-								pt__Name		= PatName
-								DOB				= _DOB
-								prim_ins__		= PrimIns
-								prim_ins_Name	= PrimInsNm
-								primary_id__	= PrimInsID
-								bdmard__current	= _Curr_bDMARD_Date 
-								h				= Curr_bDMARD_Desc
-								i				= Curr_bDMARD_Doctor
-								j				= Curr_bDMARD_Doctor_Num
-								k				= Curr_bDMARD_Location_Num
-								l				= Curr_bDMARD_SIG
-								m				= Curr_bDMARD_Quantity
-								n				= Curr_bDMARD_Refills
-								O				= Curr_bDMARD_Route
-								P				= Curr_bDMARD_Strength
-								Q				= Curr_bDMARD_Type
-								R				= Curr_bDMARD_DC_Reason
-								S				= _Start_Date
-								T				= _Stop_Date
-								bdmard			= _HX_bDMARD_Date
-								V				= HX_bDMARD_Desc
-								W				= HX_bDMARD_Strength
-								X				= HX_bDMARD_Quantity
-								infusion__		= _Infusion_DocumentDate
-								Z				= Infusion_Form_Name 
-								AA				= Infusion_ContentOfComponent
-								RA_DX_			= _RA_DX_Date
-								AC				= DxCode
-								)
-						) ;
-DOB						= input(_dob,mmddyy10.) ;
-Current_bDMARD_Date		= input(_Curr_bDMARD_Date,mmddyy10.) ;
-Start_Date				= input(_Start_Date,mmddyy10.) ;
-Stop_Date				= input(_Stop_Date,mmddyy10.) ;
-HX_bDMARD_Date			= input(_HX_bDMARD_Date,mmddyy10.) ;
-Infusion_DocumentDate	= input(_Infusion_DocumentDate,mmddyy10.) ;
-RA_DX_Date				= input(_ra_dx_date,mmddyy10.) ;
-
-if strip(accNum) ^= '' ;
-
-format dob Current_bDMARD_Date start_date Stop_Date HX_bDMARD_Date Infusion_DocumentDate RA_DX_Date mmddyy10. ;
-
-drop _: ;
-
-run;*got 10345 from 10346;
-
-
-data &raw.._11_tobacco_use ;
-set  &wrk.._11_tobacco_use(rename = (acct_		= AccNum
-									pt__Name		= PatName
-									DOB				= _DOB
-									prim_ins__		= PrimIns
-									prim_ins_Name	= PrimInsNm
-									primary_id__	= PrimInsID
-									problem_list	= _ProbOnset_Date
-									h				= ProbOnset_Code
-									i				= ProbOnset_Desc
-									j				= ProbOnset_Doctor_Num
-									smoking_date_queried	= _Smoking_Date_Queried
-									smoking_counseling_		= Smoking_Counseling
-									ra_dx_					= _RA_DX_Date
-									o						= DxCode
-									)
-								) ;
-if strip(accNum) ^= '' ;
-
-DOB						= input(_dob,mmddyy10.) ;
-ProbOnset_Date			= input(_ProbOnset_Date,mmddyy10.) ;
-Smoking_Date_Queried	= input(_Smoking_Date_Queried,mmddyy10.) ;
-RA_DX_Date				= input(_RA_DX_Date,mmddyy10.) ;
-
-format dob ProbOnset_Date Smoking_Date_Queried RA_DX_Date mmddyy10. ;
-
-drop _: ;
-
-run ;*got 9817 from 9818;
-
-
-data &raw.._12_ra_disease_assess ;
-set	 &wrk.._12_ra_disease_assess (rename = (acct_					= AccNum
-											pt__Name				= PatName
-											DOB						= _DOB
-											prim_ins__				= PrimIns
-											prim_ins_Name			= PrimInsNm
-											primary_id__			= PrimInsID
-											ra_dx_					= _RA_DX_Date
-											h						= DxCode
-											ra_rapid3__dz_activity	= RAPID3_Activity_CoC
-											j						= _RAPID3_DocumentDate 
-											ra_rapid3__dz_activity_1= _RAPID3_ActivityDate
-											var12					= CDAI_Activity
-											ra_cdai__mdga			= CDAI_MDGA
-											RA_CDAI__PGA			= CDAI_PGA
-											)
-									);
-if strip(accNum) ^= '' ;
-
-DOB						= input(_dob,mmddyy10.) ;
-RA_DX_Date				= input(_RA_DX_Date,mmddyy10.) ;
-RAPID3_DocumentDate		= input(_RAPID3_DocumentDate,mmddyy10.) ;
-RAPID3_ActivityDate		= input(_RAPID3_ActivityDate,mmddyy10.) ;
-
-format DOB RA_DX_Date RAPID3_DocumentDate RAPID3_ActivityDate mmddyy10. ;
-
-drop _: ;
-
-run ;*got 9675 from 9676;
-
-
-data &raw.._13_alcohol;
-set  &wrk.._13_alcohol(rename = (acct_ 			= AccNum
-								pt__name		= PatName
-								dob				= _DOB 
-								prim_ins__		= PrimIns
-								prim_ins_name	= PrimInsNm
-								primary_id__	= PrimInsID
-								etoh__pmh_sh	= _EtOH_PMH_SH_Date
-								H				= EtOH_PMH_SH_Desc
-								i				= EtOH_PMH_SH_Status
-								ra_dx_			= _RA_DX_Date
-								k				= DxCode
-							)
-					);
-if strip(accNum) ^= '' ;
-
-DOB						= input(_dob,mmddyy10.) ;
-RA_DX_Date				= input(_RA_DX_Date,mmddyy10.) ;
-EtOH_PMH_SH_Date		= input(_EtOH_PMH_SH_Date,mmddyy10.) ;
-
-format dob ra_dx_date EtOH_PMH_SH_Date mmddyy10. ;
-
-drop _: ;
-
-run;*got 9700 from 9701;
-
-
-data &raw.._14_horiz_pat_list ;
-set  &wrk.._14_horiz_pat_list (rename = (acct__				= AccNum
-										patient_Lname		= PatName
-										appt_next_week		= _Appt_NextWeek_Date
-										d					= _Appt_NextWeek_Time
-										e					= Appt_NextWeek_Doctor
-										f					= Appt_NextWeek_DoctorNum
-										g					= Appt_NextWeek_Type
-										h					= Appt_NextWeek_Location
-										md__				= MD
-										Loc					= Loc
-										Last_Infused_On		= _Last_Infused_On_Date
-										last_dmard			= _Last_DMARD_Date
-										q					= Last_DMARD_DoctorNum
-										r					= Last_DMARD_Desc
-										s					= Last_DMARD_Strength 
-										t					= Last_DMARD_SIG 
-										u					= Last_DMARD_Discontinued
-										v					= Last_DMARD_DC_Reason
-										)
-								);
-if strip(accNum) ^= '' ;
-
-Appt_NextWeek_Date		= input(_Appt_NextWeek_Date,mmddyy10.) ;
-Appt_NextWeek_Time		= input(_Appt_NextWeek_Time,time10.) ;
-Last_Infused_On_Date	= input(_Last_Infused_On_Date,mmddyy10.) ;
-Last_DMARD_Date			= input(_Last_DMARD_Date,mmddyy10.) ;
-
-format 	Appt_NextWeek_Date Last_Infused_On_Date Last_DMARD_Date mmddyy10. 
-		Appt_NextWeek_Time timeampm8. ;
-
-drop _: ;
-
-run ;*got 32 from 34;
-
 /* ============================================================================ */
-/*						compare raw data and read-in data						*/
+/*				QC ALL TABLES & VARS				*/
 /* ============================================================================ */
 
-%macro contents_varnum_obs(dstin);
-proc contents data=&wrk..&dstin. noprint
-				out=&wrk..contes_&wrk.(keep=VARNUM NOBS) ; run ;
-proc sql;
-create table &wrk..&dstin._&wrk. as
-select distinct "&dstin." as DataName, max(varnum) as ORG_VarNum label='' , nobs as ORG_NOBS label=''
-from &wrk..contes_&wrk. ;
-quit;
-
-proc contents data=&raw..&dstin. noprint
-				out=&wrk..contes_&raw.(keep=VARNUM NOBS) ; run ;
-proc sql;
-create table &wrk..&dstin._&raw. as
-select distinct "&dstin." as DataName, max(varnum) as RAW_VarNum label='' , nobs as RAW_NOBS label=''
-from &wrk..contes_&raw. ;
-quit;
-
-data mercons&dstin. ;
-merge &dstin._: ;
-by dataName ;
-run;
-%mend;
-
-%contents_varnum_obs(_01_demo);
-%contents_varnum_obs(_02_labs);
-%contents_varnum_obs(_03_rx);
-%contents_varnum_obs(_04_vitals);
-%contents_varnum_obs(_06_prob_list);
-%contents_varnum_obs(_07_pm_hx);
-%contents_varnum_obs(_08_ov_hx);
-%contents_varnum_obs(_09b_taper_all);
-%contents_varnum_obs(_09_taper_button);
-%contents_varnum_obs(_10_bdmard_hx);
-%contents_varnum_obs(_11_tobacco_use);
-%contents_varnum_obs(_12_ra_disease_assess);
-%contents_varnum_obs(_13_alcohol);
-%contents_varnum_obs(_14_horiz_pat_list);
-
-
-data contents_compare_all ;
-length DataName $32 ;
-set &wrk..mercons_: ;
-run;
-
-ods html path="W:\Users\syang\Projects\UnitedRheum\ARBDA\SAS Results\20180912-Read-In & Explore Raw"
-		 body="Comparison Between Original Data & Read-In Cleaned Raw Data.html";
-proc print data=contents_compare_all noobs;
-title "ORG_: Variable Numbers & Observations Are Directly From Read-In Data; RAW_: VarNum & NOBS Are From Cleaned Data Saved in ARBDA Library";
-title2 "Variable Names Are Always The Same Between Before & After Read-In & Cleaning" ;
-title3 "NOBS Are 1 Observation More In ORG Than RAW For Most of The Data(Except '_14_'), DueTo Original Data Headers Occupies 2 Rows In Most Of The Time";
-title4 " '_14' Data Had 1 Extra Row Occupied by A Footnote, So 2 Extra Not-Meaningful Rows Excluded from Original to Get Raw";
-run;
-ods html close; title;title2;title3;title4;
-
-/* ================================================================ */
-/*						QC ALL TABLES & VARS						*/
-/* ================================================================ */
-
-%let ID_VAR_LIST = AccNum InsuredID PatName PrimInsID PrimInsNm ; *<--- this is list of IDs variables, need manualy set--;
 
 proc format;
 	value $mis_c
@@ -657,16 +43,14 @@ quit;
 	quit;
 
 %mend;
-%uidobs_non_indxd(arbda,_01_demo,demo,,accNum);
+*%uidobs_non_indxd(arbda,_01_demo,demo,,accNum);
 
 %macro combo_seqs(dstout,qcItem,seq);
 data &wrk..all&dstout._&qcItem.&seq. ;
 set &wrk..&dstout.&qcItem._: ;
 run;
 %mend;
-%combo_seqs(demo,uidobs,);
-
-
+*%combo_seqs(demo,uidobs,);
 
 %macro allmeans(lib,dstin,dstout,seq);
 
@@ -726,8 +110,7 @@ run;
 	run;
 
 %mend;
-%allmeans(arbda,_01_demo,demo,);
-
+*%allmeans(arbda,_01_demo,demo,);
 
 %macro allfreqs(lib,dstin,dstout,seq);
 
@@ -735,9 +118,28 @@ run;
 			  	  out  = &wrk..&dstout.ctnt_&seq.(keep=libname memname name varnum type format label nobs) ; run;
 
 	proc sql noprint ;			*<------------ CHAR_VAR_LIST --------------;
+		select distinct name into: CHAR_VAR_LIST separated by ' ' from &wrk..&dstout.ctnt_&seq.
+			where type = 2  ;
+	quit;
 
-	select distinct name into: CHAR_VAR_LIST separated by ' ' from &wrk..&dstout.ctnt_&seq.
-		where type = 2  ;
+	ods output nlevels = &wrk..&dstout.charlevels_&seq. ;
+	proc freq data = &lib..&dstin.&seq. nlevels ;
+		tables _all_ / missing noprint ;
+	run;
+
+
+	proc sql;
+	create table &wrk..&dstout.clvlgt20_&seq. as
+		select distinct a.name
+			from &wrk..&dstout.ctnt_&seq. as a
+			left join &wrk..&dstout.charlevels_&seq. as b
+				on strip(a.name) = strip(b.tableVar)
+				where a.type=2 and b.nLevels>20 ;
+	quit;
+
+	proc sql noprint ;
+		select distinct name into: GT20_LvLs_Vars separated by ' ' from &wrk..&dstout.clvlgt20_&seq.;
+		select distinct quote(name) into: GT20_LvLs_Vars_Q separated by ',' from &wrk..&dstout.clvlgt20_&seq.;
 
 	quit;
 
@@ -750,7 +152,7 @@ run;
 
 		proc freq data = &LIB..&DSTIN.&seq.  order=freq noprint;
 			table &charVar.	/ missing out = &wrk..&dstout.freq&seq._&charVarSrt. ;
-			format &ID_VAR_LIST.  $mis_c. ;
+			format &GT20_LvLs_Vars.  $mis_c. ;
 		run;
 
 		data &wrk..&dstout.freq&seq._&charVarSrt. ;
@@ -759,8 +161,7 @@ run;
 
 		VARNAME = "&charVar." ;
 
-		*if strip(varname) in (&id_var_list.) then Description = strip(put(contents,$mis_c.));
-		if find("&id_var_list.","&charVar.",'i') then Description = strip(put(contents,$mis_c.));
+		if "&charVar." in (&GT20_LvLs_Vars_Q.) then Description = strip(put(contents,$mis_c.));
 		else Description = strip(Contents) ;
 		
 		run;
@@ -774,7 +175,7 @@ run;
 	run;
 
 %mend;
-%allfreqs(arbda,_01_demo,demo,);
+*%allfreqs(arbda,_01_demo,demo,);
 
 
 %macro proc_report(dstin,dstout,seq) ;
@@ -878,4 +279,21 @@ ods rtf file="&outpath.\&outfolder.\QC&rawstd._&dstin.&seq..rtf"
 ods rtf close;
 
 %mend;
-%output_reports(RAW,_01_DEMO,DEMO,);
+*%output_reports(RAW,_01_DEMO,DEMO,);
+
+
+
+%macro RUN_ALL_QC(LIB,DSTIN,DSTOUT,SEQ,UID,RAWSTD);
+
+%uidobs_non_indxd(&LIB.,&DSTIN.,&DSTOUT.,&SEQ.,&UID.);
+%combo_seqs(&DSTOUT.,UIDOBS,);
+
+%allMeans(&LIB.,&DSTIN.,&DSTOUT.,&SEQ.);
+
+%allFreqs(&LIB.,&DSTIN.,&DSTOUT.,&SEQ.);
+
+%output_reports(&RAWSTD,&DSTIN.,&DSTOUT.,);
+
+%mend;
+%RUN_ALL_QC(ARBDA,_03_RX,RX, ,ACCNUM,RAW)
+
