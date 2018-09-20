@@ -1,6 +1,6 @@
-/* ================================================================================ */
-/*								QC ALL TABLES & VARS								*/
-/* ================================================================================ */
+/* ============================================================================ */
+/*	        	        QC ALL TABLES & VARS				*/
+/* ============================================================================ */
 
 
 proc format;
@@ -95,21 +95,22 @@ run;
 
 	data &wrk..all&dstout._meands&seq.(drop=mean_ std_) ;
 	set &wrk..&dstout.meand&seq._:(rename=(n=N_ nmiss=NMISS_ mean=MEAN_ std=STD_ min=MIN_ p1=P1_ p5=P5_ p10=P10_ q1=Q1_ median=MEDIAN_ q3=Q3_ p90=P90_ p95=P95_ p99=P99_ max=MAX_)) ;
-	format mean_ -- max_ mmddyy10. ;
+	format _null_ mean_ -- max_ mmddyy10. ;
 	run;
 
 	data &wrk..all&dstout._meants&seq.(drop=mean_ std_) ;
 	set &wrk..&dstout.meant&seq._:(rename=(n=N_ nmiss=NMISS_ mean=MEAN_ std=STD_ min=MIN_ p1=P1_ p5=P5_ p10=P10_ q1=Q1_ median=MEDIAN_ q3=Q3_ p90=P90_ p95=P95_ p99=P99_ max=MAX_)) ;
-	format mean_ -- max_ time5. ;
+	format _null_ mean_ -- max_ time5. ;
 	run;
 
 	data &wrk..all&dstout._meanns&seq. ;
 	set &wrk..&dstout.meann&seq._: (rename=(n=N_ nmiss=NMISS_ mean=MEAN_ std=STD_ min=MIN_ p1=P1_ p5=P5_ p10=P10_ q1=Q1_ median=MEDIAN_ q3=Q3_ p90=P90_ p95=P95_ p99=P99_ max=MAX_)) ;
-	format mean_ -- max_ best12. ;
+	format _null_ mean_ -- max_ best12. ;
 	run;
 
 %mend;
 *%allmeans(arbda,_01_demo,demo,);
+
 
 %macro allfreqs(lib,dstin,dstout,seq);
 
@@ -136,11 +137,20 @@ run;
 				where a.type=2 and b.nLevels>20 ;
 	quit;
 
+	%let dsid = %sysfunc(open(&wrk..&dstout.clvlgt20_&seq.)) ;
+	%let nobs = %sysfunc(attrn(&dsid,nlobs)) ;
+	%let dsid = %sysfunc(close(&dsid));
+
+	%if %eval(&nobs)>0 %then %do;
 	proc sql noprint ;
 		select distinct name into: GT20_LvLs_Vars separated by ' ' from &wrk..&dstout.clvlgt20_&seq.;
 		select distinct quote(name) into: GT20_LvLs_Vars_Q separated by ',' from &wrk..&dstout.clvlgt20_&seq.;
-
 	quit;
+	%end;
+	%else %do ;
+		%let GT20_LvLs_Vars = _null_ ;
+		%let GT20_LvLs_Vars_Q = "_null_" ;
+	%end;
 
 	%let i=0 ;
 	%do %while (%qscan(&char_var_list.,%eval(&i+1)) ne ) ;
@@ -151,7 +161,7 @@ run;
 
 		proc freq data = &LIB..&DSTIN.&seq.  order=freq noprint;
 			table &charVar.	/ missing out = &wrk..&dstout.freq&seq._&charVarSrt. ;
-			format &GT20_LvLs_Vars.  $mis_c. ;
+			format _null_ &GT20_LvLs_Vars.  $mis_c. ;
 		run;
 
 		data &wrk..&dstout.freq&seq._&charVarSrt. ;
@@ -174,15 +184,16 @@ run;
 	run;
 
 %mend;
+
 *%allfreqs(arbda,_01_demo,demo,);
 
 
-%macro proc_report(dstin,dstout,seq) ;
+%macro proc_report(dstin,dstout,seq,uid) ;
 
 proc report data = &wrk..all&dstout._uidobs ;
-columns unique_ids observations ;
-define unique_ids 			/ display 	'Unique IDs' width=15 	format=comma15. ;
-define observations 			/ display 	'Observations'	width=20 	format=comma15. ;
+columns unique_&uid. observations ;
+define unique_&uid. 			/ display 	"Unique &uid."  width=15 	format=comma15. ;
+define observations 			/ display 	"Observations"	width=20 	format=comma15. ;
 title "====== QC &dstin.&seq. Data ======" ;
 title2 "Unique_IDs & Observations Counts" ;
 run;
