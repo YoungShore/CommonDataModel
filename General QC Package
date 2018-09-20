@@ -18,7 +18,7 @@ run;
 %macro uidobs_indxd(lib,dstin,dstout,seq,uid);
 proc contents data = &lib..&dstin.&seq. details noprint
 			  out  = &wrk..&dstout.ctnt_&seq.(keep=libname memname name varnum type format label nobs) ; run;
-proc contents data = &lib..&dstin. details noprint
+proc contents data = &lib..&dstin.&seq. details noprint
 			  out2 = &wrk..&dstout.ctnt2_&seq.(keep=libname member name type numvals) ; run;
 
 proc sql;
@@ -37,19 +37,19 @@ quit;
 
 	proc sql;
 	create table &dstout.uidobs_&seq. as
-	select distinct count(distinct &uid.) as Unique_IDs, count(&uid.) as Observations
+	select distinct count(distinct &uid.) as Unique_&UID., count(&uid.) as Observations
 	from &lib..&dstin.&seq.;
 	quit;
 
 %mend;
 *%uidobs_non_indxd(arbda,_01_demo,demo,,accNum);
 
-%macro combo_seqs(dstout,qcItem,seq);
-data &wrk..all&dstout._&qcItem.&seq. ;
+%macro combo_seqs(dstout,qcItem);
+data &wrk..all&dstout._&qcItem. ;
 set &wrk..&dstout.&qcItem._: ;
 run;
 %mend;
-*%combo_seqs(demo,uidobs,);
+*%combo_seqs(demo,uidobs);
 
 %macro allmeans(lib,dstin,dstout,seq);
 
@@ -179,7 +179,7 @@ run;
 
 %macro proc_report(dstin,dstout,seq) ;
 
-proc report data = &wrk..all&dstout._uidobs&seq. ;
+proc report data = &wrk..all&dstout._uidobs ;
 columns unique_ids observations ;
 define unique_ids 			/ display 	'Unique IDs' width=15 	format=comma15. ;
 define observations 			/ display 	'Observations'	width=20 	format=comma15. ;
