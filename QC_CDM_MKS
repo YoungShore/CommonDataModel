@@ -525,7 +525,7 @@ quit;run;
 %mend;
 
 
-%macro uniid_count(stdlib,dstin,datyp,Ver,year_strt,year_end);				/* ------------ UNI ID Counts ---------- */
+%macro uidobs_indxd(stdlib,dstin,datyp,Ver,year_strt,year_end);				/* ------------ UNI ID Counts for Indexed Data ---------- */
 
 %do year = &year_strt. %to &year_end. ;
 %let yr	 = %substr(&year.,3,2) ;
@@ -553,6 +553,19 @@ quit;
 
 %mend;
 
+%macro uidobs_non_indxd(stdlib,dstin,datyp,Ver,year_strt,year_end);			/* ------------ UNI ID Counts for Non Indexed Data ---------- */
+
+%do year = &year_strt, %to &year_end. ;
+%let yr	 = %substr(&year.,3,2) ;
+
+proc sql;
+create table &wrk..&datsrc.&ver._&datyp.&yr.uniid_tot as
+select distinct input("&year.",best4.) 	as Year,
+				count(distinct &uid.) 	as Unique_PATIDs,
+				count(&uid.)			as Observations
+from &std..&dstin.&year.;
+quit;
+%mend;
 
 %macro newid_count(ver,datyp,year_strt,year_end);							/* ------------- NEW ID Counts ------------ */
 
