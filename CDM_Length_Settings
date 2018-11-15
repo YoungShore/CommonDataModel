@@ -1,0 +1,76 @@
+
+/* ========== Standardized variable length settings based on PCORNet 4.0 version ========== */
+/* some settings are based on practical needs(marked out with specific notes), if want to build format strictly the same with PCORNet, please refer to PCORNet website:
+    http://www.pcornet.org/wp-content/uploads/2018/01/PCORnet-Common-Data-Model-v4.0_Specification.pdf
+*/
+
+
+%macro length_demo; /* ===================== demographic data ==================== */
+  length  PATID                     $36 
+          BIRTH_DATE                4 
+          BIRTH_TIME                8 
+          SEX                       $2 
+          SEX_ORIENTATION           $2 
+          GENDER_IDENTITY           $2 
+          HISPANIC                  $2 
+          RACE                      $2 
+          BIOBANK_FLAG              $1 
+          PAT_PREF_LANGUAGE_SPOKEN  $3
+  ;
+%mend;
+
+%macro length_pro; /* ================= pro_cm data (modified to optimize ARBDA needs ========== */
+	length 	PATID					$36 
+			PRO_CM_ID				$36 
+			ENCOUNTERID				$36 
+			PRO_DATE				4 
+			PRO_TIME				8 
+			PRO_TYPE				$2 
+			PRO_ITEM_NAME			$36 
+			PRO_ITEM_LOINC			$10 
+			PRO_RESPONSE_TEXT		$36 
+			PRO_RESPONSE_NUM		8 
+			PRO_METHOD				$2 
+			PRO_MODE				$2
+			PRO_CAT					$2
+			PRO_ITEM_VERSION		$10
+			PRO_MEASURE_NAME			$36
+			PRO_MEASURE_SEQ				$4
+			PRO_MEASURE_SCORE			8
+			PRO_MEASURE_THETA			8
+			PRO_MEASURE_SCALED_TSCORE	8 
+			PRO_MEASURE_STANDARD_ERROR	8
+			PRO_MEASURE_COUNT_SCORED	8
+			PRO_MEASURE_LOINC			$10
+			PRO_MEASURE_VERSION			$10
+			PRO_ITEM_RULLNAME			$36
+			PRO_ITEM_TEXT				$36
+			PRO_MEASURE_FULLNAME		$36
+	;
+%mend;
+
+%macro length_encounter; /* ============= encounter data ============= */
+	length 	PATID					$36 
+			ENCOUNTERID				$36 
+			ENC_TYPE				$2 
+			ADMIT_DATE				4 
+			ADMIT_TIME				8
+			ADMIT_TYPE				$1
+			ADMITTING_SOURCE		$2 
+			DISCHARGE_DATE			4 
+			DISCHARGE_TIME			8 
+			DISCHARGE_DIPOSITION	$2 
+			DISCHARGE_STATUS		$2 
+			DRG						$3 
+			DRG_TYPE				$2 
+			PAYER_TYPE_PRIMARY		$4 
+			PAYER_TYPE_SECONDARY	$4 
+			PROVIDERID				$36 
+			PROVIDERID_TYPE			$4 
+			PROVIDER_TYPE			$3 
+			FACILITYID				$36 
+			FACILITY_LOCATION		$3 
+			FACILITY_TYPE			$10 
+	;
+%mend;
+
