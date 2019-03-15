@@ -1,0 +1,56 @@
+/* These are SAS codes, for Common Data Model data standardization, based on PCORNet standards, version 4.0 ;
+   To save the time of setting up  (PCORNet4.0) variables length in different data resources, and 
+   to record common formats in one place, 
+   I writes all the default settings below:
+   
+   ###### Below are for Death Part: ######
+
+*/
+
+%macro length_death ;
+
+length
+  PATID                       $36
+  DEATH_DATE                  4 
+  DEATH_DATE_IMPUTE           4 
+  DEATH_SOURCE                $2
+  DEATH_MATCH_CONDFIDENCE     $2 
+;
+%mend ; 
+
+%macro format_death ;
+
+proc format ;
+  value $death_date_impu
+    'B' = 'Both month and day imputed'
+    'D' = 'Day imputed'
+    'M' = 'Month imputed'
+    'N' = 'Not imputed'
+    'NI'= 'No information'
+    'UN'= 'Unknown'
+    'OT'= 'Other'
+  ;
+
+  value $death_source 
+    'L' = 'Other, locally defined'
+    'N' = 'National Death Index'
+    'D' = 'Social Security'
+    'S' = 'State Death files'
+    'T' = 'Tumor data'
+    'NI'= 'No information'
+    'UN'= 'Unknown'
+    'OT'= 'Other'
+  ;
+  
+  value $death_match_confi
+    'E' = 'Excellent'
+    'F' = 'Fair'
+    'P' = 'Poor'
+    'NI'= 'No information'
+    'UN'= 'Unknown'
+    'OT'= 'Other'
+  ;
+  
+run;
+
+%mend;
