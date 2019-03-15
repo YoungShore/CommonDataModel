@@ -1,0 +1,96 @@
+/* These are SAS codes, for Common Data Model data standardization, based on PCORNet standards, version 4.0 ;
+   To save the time of setting up  (PCORNet4.0) variables length in different data resources, and 
+   to record common formats in one place, 
+   I writes all the default settings below:
+   
+   ###### Below are for Demographics Part: ######
+
+*/
+
+%macro length_demo ; 
+length
+  PATID                 $36
+  BIRTH_DATE            4
+  BIRTH_TIME            8
+  SEX                   $2
+  SEXUAL_ORIENTATION    $2 
+  GENDER_IDENTITY       $2
+  HISPANIC              $2
+  RACE                  $2
+  BIOBANK_FLAG          $1
+  PAT_PREF_LANGUAGE_SPOKEN    $3
+;
+%mend;
+
+%macro format_demo ;
+proc format ;
+  value $sex
+    'A' = 'Ambiguous (If both M/F occurred)'
+    'F' = 'Female'
+    'M' = 'Male'
+    'NI'= 'No information (All missing)'
+    'UN'= "Unknown (Only 'unknown' found, no other valid M/F found)"
+    'OT'= 'Other (nonsense values)'
+  ;
+  
+  value $sex_orient 
+    'AS' = 'Asexual'
+    'BI' = 'Bisexual'
+    'GA' = 'Gay'
+    'LE' = 'Lesbian'
+    'QU' = 'Queer'
+    'QS' = 'Questioning'
+    'ST' = 'Straight'
+    'SE' = 'Something else'
+    'MU' = 'Multiple sexual orientations'
+    'DC' = 'Decline to answer'
+    'NI' = 'No information'
+    'UN' = 'Unknown'
+    'OT' = 'Other'
+    ;
+  
+  value $gender_id
+    'M' = 'Man
+    'F' = 'Woman
+    'TM'= 'Transgender male/Trans man/Female-to-male
+    'TF'= 'Transgender female/Trans woman/Male-to-female
+    'GQ'= 'Genderqueer
+    'SE'= 'Something else
+    'MU'= 'Multiple gender categories
+    'DC'= 'Decline to answer
+    'NI'= 'No information
+    'UN'= 'Unknown
+    'OT'= 'Other'
+    ;
+    
+  value $hispanic
+    'Y' = 'Yes'
+    'N' = 'No'
+    'R' = 'Refuse to answer'
+    'NI'= 'No information'
+    'UN'= 'Unknown'
+    'OT'= 'Other'
+  ;
+  
+  value $race
+    '01' = 'American Indian or Alaska Native'
+    '02' = 'Asian'
+    '03' = 'Black or African American'
+    '04' = 'Native Hawaiian or Other Pacific Islander'
+    '05' = 'White'
+    '06' = 'Multiple race'
+    '07' = 'Refuse to answer'
+    'NI' = 'No information' 
+    'UN' = 'Unknown'
+    'OT' = 'Other'
+  ;
+  
+  value $biobank
+    'Y' = 'Yes'
+    'N' = 'No'
+  ;
+  
+run;
+
+%mend;
+
