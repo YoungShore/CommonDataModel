@@ -1,0 +1,39 @@
+/* These are SAS codes, for Common Data Model data standardization, based on PCORNet standards, version 4.0 ;
+   To save the time of setting up  (PCORNet4.0) variables length in different data resources, and 
+   to record common formats in one place, 
+   I writes all the default settings below:
+   
+   ###### Below are for Enrollment Part: ######
+
+*/
+
+%macro length_enroll ;
+
+length
+  PATID             $36
+  ENR_START_DATE    4 
+  ENR_END_DATE      4
+  CHART             $1
+  ENR_BASIS         $1
+;
+
+%mend ;
+
+%macro format_enroll ;
+
+proc format ;
+
+  value $chart
+    'Y' = 'Yes'
+    'N' = 'No'
+  ;
+  
+  value $enr_basis
+    'I' = 'Medical Insurance Coverage'
+    'D' = 'Outpatient prescription drug coverage'
+    'G' = 'Geography'
+    'A' = 'Algorithmic'
+    'E' = 'Encounter-based'
+  ;
+  
+%mend;
