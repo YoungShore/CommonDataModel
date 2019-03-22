@@ -1,0 +1,82 @@
+/* These are SAS codes, for Common Data Model data standardization, based on PCORNet standards, version 4.0 ;
+   To save the time of setting up  (PCORNet4.0) variables length in different data resources, and 
+   to record common formats in one place, 
+   I writes all the default settings below:
+   
+   ###### Below are for Demographics Part: ######
+
+*/
+
+%macro length_procedures ;
+
+length
+  PATID           = $36 
+  PROCEDURESID    = $36 
+  ENCOUNTERID     = $36
+  ENC_TYPE        = $2 
+  ADMIT_DATE      = 4 
+  PX_DATE         = 4
+  PX              = $11 
+  PX_TYPE         = $2 
+  PX_SOURCE       = $2 
+  PPX             = $2 
+  PROVIDERID      = $10 
+  PROVIDERID_TYPE = $10
+  PROVIDDER_TYPE  = $5
+  ;
+  
+%mend ;
+
+
+
+%macro format_procedures ;
+
+proc format ;
+  /* added the tail '_p' means this is PCORNet version of encounter type, since there are a bit of different settings in my work */
+  value $enc_type_p 
+    'AV' = 'Ambulatory Visit'
+    'ED' = 'Emergency Department'
+    'EI' = 'Emergency Department Admit to Inpatient Hospital Stay (permissible substitution)'
+    'IP' = 'Inpatient Hospital Stay'
+    'IS' = 'Non-Acute Institutional Stay'
+    'OS' = 'Observation Stay'
+    'IC' = 'Institutional Professional Consult(permissible substitution)'
+    'OA' = 'Other Ambulatory Visit'
+    'NI' = 'No Information'
+    'UN' = 'Unknown'
+    'OT' = 'Other'
+  ;
+  
+  value $px_type 
+    '09' = 'ICD-9-PCS'
+    '10' = 'ICD-10-PCS'
+    '11' = 'ICD-11-PCS'
+    'CH' = 'CPT or HCPCS'
+    'LC' = 'LOINC'
+    'ND' = 'NDC'
+    'RE' = 'Revenue'
+    'NI' = 'No Information'
+    'UN' = 'Unknown'
+    'OT' = 'Other'
+  ;
+  
+  value $px_source 
+    'OD' = 'Order'
+    'BI' = 'Billing'
+    'CL' = 'Claim'
+    'NI' = 'No Information'
+    'UN' = 'Unknown'
+    'OT' = 'Other'
+  ;
+  
+  value $ppx 
+    'P' = 'Principal'
+    'S' = 'Secondary'
+    'NI'= 'No Information'
+    'UN'= 'Unknown'
+    'OT'= 'Other'
+  ;
+  
+run; 
+
+%
