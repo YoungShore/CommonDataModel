@@ -1,0 +1,21 @@
+/* after some frustration of finding the old SAS results and corresponding SAS codes, I'd like have the SAS header as below,
+  to define SAS title & footnote of outputs */
+
+/* ----------------- Define the Current Date When Program is Run ---------------------- */
+
+%let curent       = %sysfunc(date(),yymmdd6.) ;
+%let curentDat    = 20%sysfunc(date(),yymmdd6.) ;
+
+/* ----------------- Define the output folder according to current date for version contral ---------------- */
+
+%let outPath      = your_project_folder_path ; *<--- which not include the final folder whose names may vary by dates;
+%let outFolder    = &curentDat.-your_final_folder_name ; 
+                    *^--- the &curentDat. is used in front for better ordering, and the final_folder_name will be the folder name defined by user;
+
+/* ----------------- Define SAS Program Location & Name -------------------- */
+
+%leg programPath  = your_sas_file_location ;  
+%let programNam   = your_sas_file_name ;
+
+%let footnote = program is &programPath.\&programNam. ;
+
