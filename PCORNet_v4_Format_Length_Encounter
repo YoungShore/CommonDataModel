@@ -1,0 +1,108 @@
+/* These are SAS codes, for Common Data Model data standardization, based on PCORNet standards, version 4.0 ;
+   To save the time of setting up  (PCORNet4.0) variables length in different data resources, and 
+   to record common formats in one place, 
+   I writes all the default settings below:
+   
+   ###### Below are for Encounter Part: ######
+
+*/
+
+%macro length_encounter ;
+
+length 
+  PATID                       $36 
+  ENCOUNTERID                 $36 
+  ADMIT_DATE                  4
+  ADMIT_TIME                  8
+  DISCHARGE_DATE              4
+  DISCHARGE_TIME              8
+  PROVIDERID                  $36
+  FACILITY_LOCATION           $3
+  ENC_TYPE                    $2
+  FACILITYID                  $36
+  DISCHARGE_DISPOSITION       $2
+  DISCHARGE_STATUS            $2
+  DRG                         $3
+  DRG_TYPE                    $2
+  ADMITTING_SOURCE            $2
+  PAYER_TYPE_PRIMARY          $4
+  PAYER_TYPE_SECONDARY        $4
+  FACILITY_TYPE               $36
+;
+
+%mend ;
+
+
+%macro format_encounter ;
+
+proc format ;
+  value $enc_type 
+    'AV' = 'Ambulatory Visit'
+    'ED' = 'Emergency Department
+    'EI' = 'Emergency Department Admit to Inpatient Hospital Stay (permissible substitution)'
+    'IP' = 'Inpatient Hospital Stay'
+    'IS' = 'Non-Acute Institutional Stay'
+    'OS' = 'Observation Stay'
+    'IC' = 'Institutional Professional Consult(permissible substitution)'
+    'OA' = 'Other Ambulatory Visit'
+    'NI' = 'No Information'
+    'UN' = 'Unknown'
+    'OT' = 'Other'
+  ;
+  
+  value $discharge_dispo
+    'A' = 'Discharge Alive'
+    'E' = 'Expired'
+    'NI'= 'No Information'
+    'UN'= 'Unknown'
+    'OT'= 'Other'
+  ;
+  
+  value $discharge_status
+    'AF' = 'Adult Foster Home'
+    'AL' = 'Assisted Living Facility'
+    'AM' = 'Against Medical Advice'
+    'AW' = 'Absent without Leave'
+    'EX' = 'Expired'
+    'HH' = 'Home Health'
+    'HO' = 'Home/Self Care'
+    'HS' = 'Hospice'
+    'IP' = 'Other Acute Inpatient Hospital'
+    'NH' = 'Nursing Home (Include ICF)'
+    'RH' = 'Rehabilitation Facility'
+    'RS' = 'Residential Facility'
+    'SH' = 'Still In Hospital'
+    'SN' = 'Skilled Nursing Facility'
+    'NI' = 'No Information'
+    'UN' = 'Unknown'
+    'OT' = 'Other'
+  ;
+  
+  value $drg_type
+    '01' = 'CMS-DRG(old system)'
+    '02' = 'MS-DRG(current system)'
+    'NI' = 'No Inforamtion'
+    'UN' = 'Unknown'
+    'OT' = 'Other'
+  ;
+  
+  value $admitting_source
+    'AF' = 'Adult Foster Home'
+    'AL' = 'Assisted Living Facility'
+    'AV' = 'Ambulatory Visit'
+    'ED' = 'Emergency Department'
+    'HH' = 'Home Health'
+    'HO' = 'Home/Self Care'
+    'HS' = 'Hospice'
+    'IP' = 'Other Acute Inpatient Hospital'
+    'NH' = 'Nursing Home (Include ICF)'
+    'RH' = 'Rehabilitation Facility'
+    'RS' = 'Residential Facility'
+    'SN' = 'Skilled Nursing Facility'
+    'NI' = 'No Information'
+    'UN' = 'Unknown'
+    'OT' = 'Other'
+  ;
+
+run ;
+
