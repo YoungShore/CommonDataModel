@@ -1,0 +1,125 @@
+/* These are SAS codes, for Common Data Model data standardization, based on PCORNet standards, version 4.0 ;
+   To save the time of setting up  (PCORNet4.0) variables length in different data resources, and 
+   to record common formats in one place, 
+   I writes all the default settings below:
+   
+   ###### Below are for Demographics Part: ######
+
+*/
+
+%macro length_diagnosis ;
+
+length 
+  PATID                 = $36 
+  DIAGNOSISID           = $36 
+  ENCOUNTERID           = $36 
+  ENC_TYPE              = $2 
+  ADMIT_DATE            = 4 
+  ADMIT_TYPE            = $1 
+  DX                    = $11 
+  DX_TYPE               = $2 
+  DX_SOURCE             = $2
+  DX_ORIGIN             = $2 
+  PDX                   = $1 
+  DX_POA                = $2 
+  PROVIDERID            = $36 
+  PROVIDERID_TYPE       = $10
+  PROVIDER_TYPE         = $5 
+  FACILITYID            = $36 
+  FACILITY_TYPE         = $10 
+  SOURCE                = $5 
+  DISCHARGE_DATE        = 4 
+  DISCHARGE_DISPOSITION = $2 
+  DISCHARGE_STATUS      = $2 
+;
+
+%mend ;
+
+
+%macro format_diagnosis ;
+
+proc format ;
+  /* added the tail '_p' means this is PCORNet version of encounter type, since there are a bit of different settings in my work */
+  value $enc_type_p 
+    'AV' = 'Ambulatory Visit'
+    'ED' = 'Emergency Department'
+    'EI' = 'Emergency Department Admit to Inpatient Hospital Stay (permissible substitution)'
+    'IP' = 'Inpatient Hospital Stay'
+    'IS' = 'Non-Acute Institutional Stay OS=Observation Stay'
+    'IC' = 'Institutional Professional Consult (permissible substitution)'
+    'OA' = 'Other Ambulatory Visit'
+    'NI' = 'No information'
+    'UN' = 'Unknown'
+    'OT' = 'Other'
+  ;
+  /* added the tail '_u' means this is NOT a PCORNet version of encounter type, it's something from my work */
+  value $enc_type_u 
+    'AV' = 'Ambulatory Visit'
+    'ED' = 'Emergency Department'
+    'HH' = 'Home Health'
+    'IF' = 'Inpatient Face-to-Face Encounter'
+    'IP' = 'Inpatient Vist'
+    'NH' = 'Nursing Home'
+    'OT' = 'Other'
+  ;
+
+  value $dx_type
+    '09' = 'ICD-9'
+    '10' = 'ICD-10'
+    '11' = 'ICD-11'
+    'SM' = 'SNOMED CT'
+    'NI' = 'No information'
+    'UN' = 'Unknown'
+    'OT' = 'Other'
+  ;
+  
+  value $dx_source 
+    'AD' = 'Admitting'
+    'DI' = 'Discharge'
+    'FI' = 'Final'
+    'IN' = 'Interim'
+    'NI' = 'No Information'
+    'UN' = 'Unknown'
+    'OT' = 'Other'
+  ;
+  
+  value $dx_orgin 
+    'OD' = 'Order'
+    'BI' = 'Billing'
+    'CL' = 'Claim'
+    'NI' = 'No Information'
+    'UN' = 'Unknown'
+    'OT' = 'Other'
+  ;
+  
+  value $pdx_p 
+    'P' = 'Primary(Prinicpal)'
+    'S' = 'Secondary'
+    'NI'= 'No Information'
+    'UN'= 'Unknown'
+    'OT'= 'Other'
+  ;
+
+  value $pdx_u 
+    'A' = 'Admission' 
+    'P' = 'Primary(Prinicpal)'
+    'S' = 'Secondary'
+    'NI'= 'No Information'
+    'UN'= 'Unknown'
+    'OT'= 'Other'
+  ;
+  
+  value $dx_poa 
+    'Y' = 'Diagnosis Present'
+    'N' = 'Diagnosis Not Present'
+    'U' = 'Insufficient Documentation'
+    'W' = 'Clinically Undetermined'
+    '1' = 'Unreported/Not Used'
+    'NI'= 'No Information'
+    'UN'= 'Unknown'
+    'OT'= 'Other'
+  ;
+
+run;
+
+%mend ;
