@@ -3,25 +3,28 @@
    to record common formats in one place, 
    I writes all the default settings below:
    
-   ###### Below are for Death Part: ######
+   ###### Below are for Demographics Part: ######
 
 */
 
 %macro length_death ;
 
-length
-  PATID                       $36
-  DEATH_DATE                  4 
-  DEATH_DATE_IMPUTE           4 
-  DEATH_SOURCE                $2
-  DEATH_MATCH_CONDFIDENCE     $2 
+length 
+  PATID                   = $36 
+  DEATH_DATE              = 4 
+  DEATH_DATE_IMPUTE       = $2 
+  DEATH_SOURCE            = $2 
+  DEATH_MATCH_CONFIDENCE  = $2 
 ;
-%mend ; 
+
+%mend ;
+
 
 %macro format_death ;
 
 proc format ;
-  value $death_date_impu
+
+  value $death_date_impute 
     'B' = 'Both month and day imputed'
     'D' = 'Day imputed'
     'M' = 'Month imputed'
@@ -30,8 +33,8 @@ proc format ;
     'UN'= 'Unknown'
     'OT'= 'Other'
   ;
-
-  value $death_source 
+  
+  value $death_source
     'L' = 'Other, locally defined'
     'N' = 'National Death Index'
     'D' = 'Social Security'
@@ -42,7 +45,7 @@ proc format ;
     'OT'= 'Other'
   ;
   
-  value $death_match_confi
+  value $daeth_match_confidence
     'E' = 'Excellent'
     'F' = 'Fair'
     'P' = 'Poor'
@@ -51,6 +54,6 @@ proc format ;
     'OT'= 'Other'
   ;
   
-run;
+run ;
 
-%mend;
+%mend ;
